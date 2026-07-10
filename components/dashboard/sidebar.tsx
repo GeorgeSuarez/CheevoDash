@@ -24,7 +24,7 @@ const navItems = [
 
 export function SidebarContent() {
   return (
-    <div className="flex h-full flex-col px-4 py-6">
+    <div className="flex flex-col px-4 py-6">
       <div className="flex items-center gap-3 px-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
           <Gamepad2 className="h-5 w-5 text-primary-foreground" />
@@ -58,27 +58,7 @@ export function SidebarContent() {
         ))}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-4">
-        <div className="rounded-xl bg-card p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 border-2 border-primary/30">
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=GamerSlayer" />
-              <AvatarFallback>GS</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold text-foreground">GamerSlayer</p>
-              <p className="text-xs text-muted-foreground">Level 42</p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">XP to next level</span>
-              <span className="font-medium text-foreground">3,250 XP</span>
-            </div>
-            <Progress value={65} className="h-1.5" />
-          </div>
-        </div>
-
+      <div className="flex flex-col">
         <form action="/auth/logout" method="post">
           <button
             type="submit"

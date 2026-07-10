@@ -16,12 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, Lightbulb, AlertTriangle, EyeOff } from "lucide-react";
-import { LoadingOverlay } from "@/components/dashboard/loading-overlay";
-import type {
-  DashboardData,
-  DateRange,
-  GameFilter,
-} from "@/lib/types";
+import type { DashboardData, DateRange, GameFilter } from "@/lib/types";
 
 export function DashboardView({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState<DashboardData>(initialData);
@@ -60,7 +55,6 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      {isPending && <LoadingOverlay message="Updating your stats..." />}
       <Sidebar />
       <main
         className="flex-1 overflow-auto bg-background p-4 lg:p-8"
@@ -80,7 +74,8 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                 Overview
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Track your achievements and compare your progress with other players.
+                Track your achievements and compare your progress with other
+                players.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -116,7 +111,10 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                 {data.error === "private_profile" ? (
                   <EyeOff className="h-6 w-6 text-destructive" aria-hidden />
                 ) : (
-                  <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
+                  <AlertTriangle
+                    className="h-6 w-6 text-destructive"
+                    aria-hidden
+                  />
                 )}
               </div>
               <div>
@@ -133,18 +131,24 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               </div>
             </div>
           ) : (
-            <div className={isPending ? "opacity-30 transition-opacity duration-200" : "transition-opacity duration-200"}>
+            <div
+              className={
+                isPending
+                  ? "opacity-30 transition-opacity duration-200"
+                  : "transition-opacity duration-200"
+              }
+            >
               <StatsCards stats={data.stats} />
 
               {/* Charts row */}
               <div className="mt-6 grid grid-cols-12 gap-6">
                 <AchievementChart series={data.achievementSeries} />
                 <div className="col-span-12 grid grid-cols-1 gap-6 lg:col-span-5">
-              <ComparisonChart comparison={data.comparison} />
-              <FriendsComparison
-                initialFriends={data.friends}
-                games={data.games}
-              />
+                  <ComparisonChart comparison={data.comparison} />
+                  <FriendsComparison
+                    initialFriends={data.friends}
+                    games={data.games}
+                  />
                 </div>
               </div>
 
@@ -163,7 +167,8 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">
-                    {data.stats.achievementsEarnedDelta != null && data.stats.achievementsEarnedDelta > 0
+                    {data.stats.achievementsEarnedDelta != null &&
+                    data.stats.achievementsEarnedDelta > 0
                       ? `Great job! You've earned ${data.stats.achievementsEarnedDelta} more achievements this month.`
                       : `You've earned ${data.stats.achievementsEarned.toLocaleString()} achievements total.`}
                   </p>

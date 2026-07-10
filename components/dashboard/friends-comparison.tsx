@@ -25,7 +25,7 @@ export function FriendsComparison({
 }) {
   const topGame = games[0];
   const [selectedAppId, setSelectedAppId] = useState<string>(
-    topGame ? String(topGame.appId) : "",
+    topGame ? String(topGame.name) : "",
   );
   const [friends, setFriends] = useState<Friend[]>(initialFriends);
   const [isPending, startTransition] = useTransition();
@@ -53,9 +53,7 @@ export function FriendsComparison({
     setSelectedAppId(value);
   }
 
-  const gamesWithAchievements = games.filter(
-    (g) => g.achievements.total > 0,
-  );
+  const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);
 
   return (
     <Card className="border-border/50 bg-card">
@@ -65,12 +63,12 @@ export function FriendsComparison({
         </CardTitle>
         {gamesWithAchievements.length > 0 && (
           <Select value={selectedAppId} onValueChange={onGameChange}>
-            <SelectTrigger className="h-8 w-40 border-border/50 bg-background text-xs">
+            <SelectTrigger className="h-8 w-50 border-border/50 bg-background text-xs">
               <SelectValue placeholder="Select a game" />
             </SelectTrigger>
             <SelectContent>
               {gamesWithAchievements.slice(0, 20).map((game) => (
-                <SelectItem key={game.appId} value={String(game.appId)}>
+                <SelectItem key={game.appId} value={String(game.name)}>
                   {game.name}
                 </SelectItem>
               ))}
@@ -85,7 +83,9 @@ export function FriendsComparison({
               <Gamepad2 className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="font-medium text-foreground">No games with achievements</p>
+              <p className="font-medium text-foreground">
+                No games with achievements
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Play some games to compare with friends.
               </p>
@@ -109,7 +109,9 @@ export function FriendsComparison({
               <Users className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="font-medium text-foreground">No friends to compare</p>
+              <p className="font-medium text-foreground">
+                No friends to compare
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Add friends on Steam to see how you stack up.
               </p>
@@ -120,9 +122,7 @@ export function FriendsComparison({
             {friends.map((friend) => (
               <div key={friend.id} className="flex items-center gap-3">
                 <Avatar className="h-9 w-9 border border-border/50">
-                  {friend.avatar && (
-                    <AvatarImage src={friend.avatar} />
-                  )}
+                  {friend.avatar && <AvatarImage src={friend.avatar} />}
                   <AvatarFallback>
                     {friend.name.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
