@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CheevoDash
 
-## Getting Started
+A Steam-style achievement dashboard built with Next.js, React 19, Tailwind CSS v4, and shadcn/ui. Track your Steam achievements, compare progress with friends, and monitor your gaming stats over time.
 
-First, run the development server:
+## Features
+
+- **Steam sign-in** — Authenticate via Steam OpenID (no passwords)
+- **Achievement overview** — See total achievements earned, average completion, perfect games, and recent unlocks
+- **Completion chart** — Track your achievement progress over custom date ranges (7d, 30d, 90d, 1y)
+- **Community comparison** — Compare your average completion against the Steam community average
+- **Friends comparison** — See how your achievement progress stacks up against friends for any game
+- **Game browser** — Browse your Steam library with sortable stats and per-game achievement data
+- **Tracked games** — Pin specific games for quick filtering
+- **Nightly snapshots** — Automatic daily snapshots to compute deltas (trending up or down)
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js](https://nextjs.org) 16 (App Router) |
+| UI | [React](https://react.dev) 19, [Tailwind CSS](https://tailwindcss.com) v4, [shadcn/ui](https://ui.shadcn.com) |
+| Charts | [Recharts](https://recharts.org) |
+| Database | [Turso](https://turso.tech) / libSQL via [Drizzle ORM](https://orm.drizzle.team) |
+| Auth | Steam OpenID + signed JWTs ([jose](https://github.com/panva/jose)) |
+| Steam API | Typed, cached client with tiered revalidation |
+| Testing | [Vitest](https://vitest.dev) |
+| Deployment | [Vercel](https://vercel.com) |
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- A [Steam Web API key](https://steamcommunity.com/dev/apikey)
+- (Optional) A [Turso](https://turso.tech) database for production
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo>
+cd CheevoDash
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy the environment template and fill in your values:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Environment variables
 
-## Learn More
+| Variable | Required | Description |
+|---|---|---|
+| `STEAM_API_KEY` | Yes | Steam Web API key |
+| `AUTH_SECRET` | Yes | Random secret for signing JWTs (`openssl rand -base64 32`) |
+| `TURSO_DATABASE_URL` | Dev default | `file:local.db` for dev, remote Turso URL for production |
+| `TURSO_AUTH_TOKEN` | Remote DB | Turso auth token (omit for local file DB) |
+| `NEXT_PUBLIC_APP_URL` | Production | Public base URL, no trailing slash (used for OpenID `return_to`) |
+| `CRON_SECRET` | Cron | Secret for the snapshot cron endpoint |
 
-To learn more about Next.js, take a look at the following resources:
+### Commands
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev          # Start dev server on localhost:3000
+npm run build        # Production build
+npm run start        # Serve production build
+npm run lint         # Run ESLint
+npm run test         # Run unit tests (Vitest)
+npm run test:watch   # Run tests in watch mode
+npm run db:generate  # Generate Drizzle migrations
+npm run db:migrate   # Apply pending migrations
+npm run db:studio    # Open Drizzle Studio
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Database
 
-## Deploy on Vercel
+For local development, the app uses a SQLite file (`local.db`). Initialize it:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run db:migrate
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For production, create a free database at [turso.tech](https://turso.tech) and set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in your environment.
+
+## Architecture
+
+```
+app/
+├── page.tsx                     # SSR dashboard (session-gated)
+├── login/page.tsx               # Steam sign-in page
+├── auth/steam/route.ts          # Initiate Steam OpenID flow
+├── auth/steam/callback/route.ts # OpenID callback + user upsert
+├── auth/logout/route.ts         # Clear session
+├── api/dashboard/route.ts       # JSON endpoint for filter/range changes
+├── api/friends-comparison/route.ts
+├── api/tracked-games/route.ts   # Toggle tracked games
+├── api/cron/snapshot/route.ts   # Nightly snapshot writer
+├── robots.ts / sitemap.ts       # SEO
+components/
+├── dashboard/                   # Feature components (props-driven)
+│   ├── dashboard-view.tsx       # Client wrapper (filter/range state)
+│   ├── stats-cards.tsx
+│   ├── achievement-chart.tsx
+│   ├── comparison-chart.tsx
+│   ├── friends-comparison.tsx
+│   ├── top-games.tsx
+│   ├── sidebar.tsx
+│   └── mobile-sidebar.tsx
+└── ui/                          # shadcn/ui primitives
+lib/
+├── auth.ts                      # Session helpers (jose JWTs)
+├── dashboard.ts                 # Data layer orchestrating Steam + DB
+├── steam.ts                     # Typed, cached Steam Web API client
+├── env.ts                       # Typed env var access
+├── types.ts                     # Shared interfaces
+├── utils.ts                     # Utility functions
+└── db/
+    ├── client.ts                # Drizzle + libSQL client (lazy)
+    └── schema.ts                # Drizzle schema (users, tracked_games, snapshots)
+```
+
+### Auth flow
+
+1. Visit `/` → `getSession()` → no session → redirect to `/login`
+2. Click "Sign in through Steam" → redirect to Steam OpenID
+3. Steam redirects back → verify identity → upsert user → create JWT session → redirect to `/`
+4. Logout: `POST /auth/logout` → clear session → redirect to `/login`
+
+### Snapshot cron
+
+A nightly cron populates the `snapshots` table for computing deltas (average completion change, games owned change). The endpoint requires `Authorization: Bearer <CRON_SECRET>`. Configured in `vercel.json` runs daily at midnight UTC.
+
+## Deployment
+
+Deploy to Vercel:
+
+1. Push to GitHub
+2. Import in Vercel
+3. Set all required environment variables in the Vercel project dashboard (Production environment)
+4. Deploy — the app handles local file DB fallback gracefully in serverless
+
+## License
+
+MIT
