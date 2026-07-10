@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db/client";
+import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { createSession } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -48,7 +48,7 @@ async function getPlayerSummary(
 
 async function upsertUser(steamId: string): Promise<void> {
   const summary = await getPlayerSummary(steamId);
-  const existing = await db
+  const existing = await getDb()
     .select()
     .from(users)
     .where(eq(users.steamId, steamId))
@@ -56,7 +56,7 @@ async function upsertUser(steamId: string): Promise<void> {
 
   if (existing.length > 0) {
     if (summary) {
-      await db
+      await getDb()
         .update(users)
         .set({
           personaName: summary.personaname,
@@ -67,7 +67,7 @@ async function upsertUser(steamId: string): Promise<void> {
     return;
   }
 
-  await db.insert(users).values({
+  await getDb().insert(users).values({
     steamId,
     personaName: summary?.personaname ?? `Player ${steamId.slice(-4)}`,
     avatar: summary?.avatarfull ?? null,

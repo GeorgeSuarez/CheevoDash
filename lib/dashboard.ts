@@ -1,5 +1,5 @@
 import { and, eq, lt, desc } from "drizzle-orm";
-import { db } from "./db/client";
+import { getDb } from "./db/client";
 import { snapshots, trackedGames } from "./db/schema";
 import {
   getFriendList,
@@ -231,7 +231,7 @@ function buildGame(
 
 async function getTrackedAppIds(steamId: string): Promise<Set<number>> {
   try {
-    const rows = await db
+    const rows = await getDb()
       .select({ appId: trackedGames.appId })
       .from(trackedGames)
       .where(eq(trackedGames.steamId, steamId));
@@ -254,7 +254,7 @@ async function getLatestSnapshot(
   beforeDate: string,
 ): Promise<SnapshotData | null> {
   try {
-    const rows = await db
+    const rows = await getDb()
       .select()
       .from(snapshots)
       .where(
@@ -277,7 +277,7 @@ async function getLatestSnapshot(
 async function writeSnapshot(steamId: string, stats: Stats): Promise<void> {
   try {
     const today = new Date().toISOString().slice(0, 10);
-    await db.insert(snapshots).values({
+    await getDb().insert(snapshots).values({
       steamId,
       date: today,
       achievementsEarned: stats.achievementsEarned,

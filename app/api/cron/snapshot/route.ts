@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { snapshotUser } from "@/lib/dashboard";
 
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const allUsers = await db.select({ steamId: users.steamId }).from(users);
+    const allUsers = await getDb().select({ steamId: users.steamId }).from(users);
     for (const user of allUsers) {
       await snapshotUser(user.steamId);
     }

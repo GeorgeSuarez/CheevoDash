@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { db } from "@/lib/db/client";
+import { getDb } from "@/lib/db/client";
 import { trackedGames } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await db
+    await getDb()
       .insert(trackedGames)
       .values({ steamId: session.steamId, appId })
       .onConflictDoNothing();
@@ -42,7 +42,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await db
+    await getDb()
       .delete(trackedGames)
       .where(
         and(
