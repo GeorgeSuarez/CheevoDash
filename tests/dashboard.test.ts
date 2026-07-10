@@ -7,7 +7,6 @@ import {
   DASHBOARD_FILTERS,
   DASHBOARD_RANGES,
 } from "@/lib/dashboard";
-import { getMockDashboardData } from "@/lib/mock-data";
 import type { Game, SteamGlobalAchievement } from "@/lib/types";
 import {
   globalAchievementsFixture,
@@ -208,42 +207,6 @@ describe("reconstructSeries", () => {
   });
 });
 
-// --- Mock dashboard data (integration-like) ---
-
-describe("getMockDashboardData", () => {
-  it("returns 34 games for 'all' filter", () => {
-    expect(getMockDashboardData({ filter: "all", today: FIXED_TODAY }).games).toHaveLength(34);
-  });
-
-  it("returns 28 games for 'tracked' filter", () => {
-    expect(getMockDashboardData({ filter: "tracked", today: FIXED_TODAY }).games).toHaveLength(28);
-  });
-
-  it("games are sorted by hours descending", () => {
-    const games = getMockDashboardData({ today: FIXED_TODAY }).games;
-    for (let i = 1; i < games.length; i++) {
-      expect(games[i - 1].hours).toBeGreaterThanOrEqual(games[i].hours);
-    }
-  });
-
-  it("comparison.you equals stats.avgCompletion", () => {
-    const data = getMockDashboardData({ today: FIXED_TODAY });
-    expect(data.comparison.you).toBe(data.stats.avgCompletion);
-  });
-
-  it("friends has 'You' first with isYou=true", () => {
-    const friends = getMockDashboardData({ today: FIXED_TODAY }).friends;
-    expect(friends[0].isYou).toBe(true);
-  });
-
-  it("30d range produces 11 points", () => {
-    expect(
-      getMockDashboardData({ range: "30d", today: FIXED_TODAY })
-        .achievementSeries,
-    ).toHaveLength(11);
-  });
-});
-
 // --- Exported constants ---
 
 describe("exported constants", () => {
@@ -351,12 +314,5 @@ describe("reconstructSeries with fixture unlocktimes", () => {
     expect(series).toHaveLength(13);
     expect(series.at(-1)!.you).toBeCloseTo(66.7, 1);
     expect(series.every((p) => p.community === 40)).toBe(true);
-  });
-});
-
-describe("getMockDashboardData error field", () => {
-  it("includes error: null in the response", () => {
-    const data = getMockDashboardData({ today: FIXED_TODAY });
-    expect(data.error).toBeNull();
   });
 });

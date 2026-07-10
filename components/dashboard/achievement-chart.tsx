@@ -30,13 +30,15 @@ export function AchievementChart({
         <CardTitle className="text-base font-semibold">
           Achievement Progress Over Time
         </CardTitle>
-        <Select defaultValue="percent">
-          <SelectTrigger className="h-8 w-36 border-border/50 bg-background text-xs">
+        <Select defaultValue="Percent Completion">
+          <SelectTrigger className="h-8 w-46 border-border/50 bg-background text-xs">
             <SelectValue placeholder="Select metric" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="percent">Percent Completion</SelectItem>
-            <SelectItem value="count">Achievement Count</SelectItem>
+            <SelectItem value="Percent Completion">
+              Percent Completion
+            </SelectItem>
+            <SelectItem value="Achievement Count">Achievement Count</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
@@ -52,12 +54,15 @@ export function AchievementChart({
           </div>
         </div>
         <div
-          className="h-[260px] w-full"
+          className="h-150 w-full"
           role="img"
           aria-label={`Achievement progress over time. You reached ${series.at(-1)?.you ?? 0}% versus the community average of ${series.at(-1)?.community ?? 0}%.`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={series} margin={{ top: 5, right: 16, bottom: 0, left: -16 }}>
+            <LineChart
+              data={series}
+              margin={{ top: 5, right: 16, bottom: 0, left: -16 }}
+            >
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
@@ -111,7 +116,6 @@ export function AchievementChart({
           </ResponsiveContainer>
         </div>
         <table className="sr-only">
-          <caption>Achievement progress over time</caption>
           <thead>
             <tr>
               <th scope="col">Date</th>

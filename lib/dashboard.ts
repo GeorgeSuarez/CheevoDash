@@ -9,7 +9,15 @@ import {
   getPlayerAchievements,
   getPlayerSummaries,
 } from "./steam";
-import { buildMockFriends, formatLabel } from "./mock-data";
+function formatLabel(date: Date, range: DateRange): string {
+  if (range === "1y") {
+    return new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
 import type {
   AchievementDataPoint,
   DashboardData,
@@ -38,9 +46,7 @@ export function filterGames(games: Game[], filter: GameFilter): Game[] {
 }
 
 export function computeStats(games: Game[]): Stats {
-  const gamesWithAchievements = games.filter(
-    (g) => g.achievements.total > 0,
-  );
+  const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);
   const achievementsEarned = games.reduce(
     (sum, g) => sum + (g.achievements.earned || 0),
     0,
@@ -61,7 +67,8 @@ export function computeStats(games: Game[]): Stats {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
   const recentUnlocks = games.reduce(
     (sum, g) =>
-      sum + (g.unlocktimes || []).filter((t) => t * 1000 >= thirtyDaysAgo).length,
+      sum +
+      (g.unlocktimes || []).filter((t) => t * 1000 >= thirtyDaysAgo).length,
     0,
   );
 
@@ -74,7 +81,9 @@ export function computeStats(games: Game[]): Stats {
     gamesOwnedDelta: null,
     gamesTracked: games.filter((g) => g.tracked).length,
     perfectGames: games.filter(
-      (g) => g.achievements.total > 0 && g.achievements.earned >= g.achievements.total,
+      (g) =>
+        g.achievements.total > 0 &&
+        g.achievements.earned >= g.achievements.total,
     ).length,
   };
 }
@@ -190,12 +199,12 @@ function buildGame(
   const completion =
     data.achievements.total === 0
       ? 0
-      : Math.round(
-          (data.achievements.earned / data.achievements.total) * 100,
-        );
+      : Math.round((data.achievements.earned / data.achievements.total) * 100);
 
   const safeCompletion = Number.isNaN(completion) ? 0 : completion;
-  const safeCommunityAvg = Number.isNaN(data.communityAvg) ? 0 : data.communityAvg;
+  const safeCommunityAvg = Number.isNaN(data.communityAvg)
+    ? 0
+    : data.communityAvg;
   const isPositive = safeCompletion >= safeCommunityAvg;
   const communityPct = Math.round(safeCommunityAvg * 10) / 10;
 
@@ -249,10 +258,7 @@ async function getLatestSnapshot(
       .select()
       .from(snapshots)
       .where(
-        and(
-          eq(snapshots.steamId, steamId),
-          lt(snapshots.date, beforeDate),
-        ),
+        and(eq(snapshots.steamId, steamId), lt(snapshots.date, beforeDate)),
       )
       .orderBy(desc(snapshots.date))
       .limit(1);
@@ -268,10 +274,7 @@ async function getLatestSnapshot(
   }
 }
 
-async function writeSnapshot(
-  steamId: string,
-  stats: Stats,
-): Promise<void> {
+async function writeSnapshot(steamId: string, stats: Stats): Promise<void> {
   try {
     const today = new Date().toISOString().slice(0, 10);
     await db.insert(snapshots).values({
@@ -357,9 +360,7 @@ export async function getDashboardData({
     (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
   );
   const detailedSlice = detailedCandidates.slice(0, MAX_DETAILED_GAMES);
-  const basicSlice = sorted.filter(
-    (g) => !detailedSlice.includes(g),
-  );
+  const basicSlice = sorted.filter((g) => !detailedSlice.includes(g));
 
   // Fetch achievement data only for the top games (expensive: 2 API calls each)
   const detailedGames = await mapWithConcurrency(
@@ -422,8 +423,11 @@ export async function getDashboardData({
   );
 
   const comparison = { you: stats.avgCompletion, community: safeCommunityAvg };
-  const friends = buildMockFriends(stats.avgCompletion);
   const games = [...filtered].sort((a, b) => b.hours - a.hours);
+  const topGameWithAch = games.find((g) => g.achievements.total > 0);
+  const friends = topGameWithAch
+    ? await getFriendsComparison(steamId, topGameWithAch.appId, 5)
+    : [];
 
   const todayStr = today.toISOString().slice(0, 10);
   const snapshot = await getLatestSnapshot(steamId, todayStr);
@@ -441,7 +445,7 @@ export async function getDashboardData({
 export async function getFriendsComparison(
   steamId: string,
   appId: number,
-  limit = 5,
+  limit = 50,
 ): Promise<Friend[]> {
   const [friendIds, yourAchievements] = await Promise.all([
     getFriendList(steamId),
@@ -451,9 +455,7 @@ export async function getFriendsComparison(
   const yourEarned = yourAchievements.filter((a) => a.achieved === 1).length;
   const yourTotal = yourAchievements.length;
   const yourPercent =
-    yourTotal === 0
-      ? 0
-      : Math.round((yourEarned / yourTotal) * 1000) / 10;
+    yourTotal === 0 ? 0 : Math.round((yourEarned / yourTotal) * 1000) / 10;
 
   const you: Friend = {
     id: "f-you",
@@ -474,10 +476,7 @@ export async function getFriendsComparison(
     summaries,
     CONCURRENCY,
     async (summary) => {
-      const achievements = await getPlayerAchievements(
-        summary.steamid,
-        appId,
-      );
+      const achievements = await getPlayerAchievements(summary.steamid, appId);
       const earned = achievements.filter((a) => a.achieved === 1).length;
       const total = achievements.length;
       const percent =
@@ -488,14 +487,19 @@ export async function getFriendsComparison(
         percent: Number.isNaN(percent) ? 0 : percent,
         avatar: summary.avatarmedium,
         isYou: false,
+        total,
       };
     },
   );
 
   const sorted = friendsWithData
-    .filter((f) => f !== null)
+    .filter((f): f is Friend & { total: number } => f !== null && f.total > 0)
     .sort((a, b) => b.percent - a.percent)
-    .slice(0, limit);
+    .slice(0, limit)
+    .map(({ total, ...friend }) => {
+      void total;
+      return friend;
+    });
 
   return [you, ...sorted];
 }

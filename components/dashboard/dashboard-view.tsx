@@ -79,14 +79,14 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Select value={filter} onValueChange={onFilterChange}>
+              <Select onValueChange={onFilterChange}>
                 <SelectTrigger className="h-9 w-36 border-border/50 bg-card text-xs">
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Games</SelectItem>
-                  <SelectItem value="owned">Owned Games</SelectItem>
-                  <SelectItem value="tracked">Tracked Games</SelectItem>
+                  <SelectItem value="All Games">All Games</SelectItem>
+                  <SelectItem value="Owned Games">Owned Games</SelectItem>
+                  <SelectItem value="Tracked Games">Tracked Games</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={range} onValueChange={onRangeChange}>

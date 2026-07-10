@@ -16,17 +16,13 @@ export async function GET(request: Request) {
   }
 
   const limitParam = searchParams.get("limit");
-  const limit = limitParam ? Math.min(Number(limitParam), 10) : 5;
+  const limit = limitParam ? Math.min(Number(limitParam), 100) : 50;
   if (Number.isNaN(limit) || limit <= 0) {
     return NextResponse.json({ error: "Invalid limit" }, { status: 400 });
   }
 
   try {
-    const friends = await getFriendsComparison(
-      session.steamId,
-      appId,
-      limit,
-    );
+    const friends = await getFriendsComparison(session.steamId, appId, limit);
     return NextResponse.json({ friends });
   } catch (err) {
     console.error("Failed to fetch friends comparison:", err);

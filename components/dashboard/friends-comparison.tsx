@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Gamepad2 } from "lucide-react";
 import type { Friend, Game } from "@/lib/types";
 
-const FRIENDS_LIMIT = 5;
+const FRIENDS_LIMIT = 100;
 
 export function FriendsComparison({
   initialFriends,
@@ -23,9 +23,10 @@ export function FriendsComparison({
   initialFriends: Friend[];
   games: Game[];
 }) {
-  const topGame = games[0];
+  const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);
+  const topGame = gamesWithAchievements[0];
   const [selectedAppId, setSelectedAppId] = useState<string>(
-    topGame ? String(topGame.name) : "",
+    topGame ? String(topGame.appId) : "",
   );
   const [friends, setFriends] = useState<Friend[]>(initialFriends);
   const [isPending, startTransition] = useTransition();
@@ -53,8 +54,6 @@ export function FriendsComparison({
     setSelectedAppId(value);
   }
 
-  const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);
-
   return (
     <Card className="border-border/50 bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -68,7 +67,7 @@ export function FriendsComparison({
             </SelectTrigger>
             <SelectContent>
               {gamesWithAchievements.slice(0, 20).map((game) => (
-                <SelectItem key={game.appId} value={String(game.name)}>
+                <SelectItem key={game.appId} value={game.name}>
                   {game.name}
                 </SelectItem>
               ))}
