@@ -57,7 +57,10 @@ export interface Stats {
   perfectGames: number;
 }
 
-export type DashboardError = "private_profile" | "api_error" | null;
+export type DashboardError = {
+  type: "private_profile" | "api_error";
+  status?: number;
+} | null;
 
 export interface DashboardData {
   stats: Stats;

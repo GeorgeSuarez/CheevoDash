@@ -108,7 +108,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
           {data.error ? (
             <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-destructive/10 p-8 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
-                {data.error === "private_profile" ? (
+                {data.error.type === "private_profile" ? (
                   <EyeOff className="h-6 w-6 text-destructive" aria-hidden />
                 ) : (
                   <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
@@ -116,14 +116,14 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               </div>
               <div>
                 <p className="font-semibold text-foreground">
-                  {data.error === "private_profile"
+                  {data.error.type === "private_profile"
                     ? "Your Steam profile is private"
                     : "Couldn't fetch your Steam data"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {data.error === "private_profile"
+                  {data.error.type === "private_profile"
                     ? "Set your profile and game details to public in Steam privacy settings, then refresh."
-                    : "Steam's API may be rate-limiting or unavailable. Please try again in a moment."}
+                    : `Steam API returned status ${data.error.status ?? "(network error)"}. Ensure your STEAM_API_KEY is correct and set in Vercel env vars for Production.`}
                 </p>
               </div>
             </div>

@@ -326,7 +326,7 @@ export async function getDashboardData({
       comparison: { you: 0, community: 0 },
       friends: [],
       games: [],
-      error: result.reason,
+      error: { type: result.reason, status: result.status ?? undefined },
     };
   }
 

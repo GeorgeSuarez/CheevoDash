@@ -14,22 +14,35 @@ import type {
 
 const STEAM_API_BASE = "https://api.steampowered.com";
 
+interface SteamFetchResult<T> {
+  data: T | null;
+  status: number | null;
+}
+
 async function steamFetch<T>(
   url: string,
-): Promise<T | null> {
+): Promise<SteamFetchResult<T>> {
   try {
     const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error(
+        `[steam] ${res.status} ${res.statusText} — ${url.slice(0, 120)}…`,
+        body.slice(0, 300),
+      );
+      return { data: null, status: res.status };
+    }
     const data = (await res.json()) as T;
-    return data;
-  } catch {
-    return null;
+    return { data, status: res.status };
+  } catch (err) {
+    console.error(`[steam] network error — ${url.slice(0, 120)}…`, err);
+    return { data: null, status: null };
   }
 }
 
 export type OwnedGamesResult =
   | { ok: true; games: SteamOwnedGame[] }
-  | { ok: false; reason: "private_profile" | "api_error" };
+  | { ok: false; reason: "private_profile" | "api_error"; status: number | null };
 
 export const getOwnedGames = cache(
   async (steamId: string): Promise<OwnedGamesResult> => {
@@ -39,11 +52,11 @@ export const getOwnedGames = cache(
     url.searchParams.set("include_appinfo", "true");
     url.searchParams.set("include_played_free_games", "true");
 
-    const data = await steamFetch<SteamOwnedGamesResponse>(url.toString());
-    if (!data) return { ok: false, reason: "api_error" };
-    if (!data.response) return { ok: false, reason: "api_error" };
-    if (Array.isArray(data.response)) return { ok: false, reason: "api_error" };
-    if (!("games" in data.response)) return { ok: false, reason: "private_profile" };
+    const { data, status } = await steamFetch<SteamOwnedGamesResponse>(url.toString());
+    if (!data) return { ok: false, reason: "api_error", status };
+    if (!data.response) return { ok: false, reason: "api_error", status };
+    if (Array.isArray(data.response)) return { ok: false, reason: "api_error", status };
+    if (!("games" in data.response)) return { ok: false, reason: "private_profile", status };
     return { ok: true, games: data.response.games ?? [] };
   },
 );
@@ -60,7 +73,7 @@ export const getPlayerAchievements = cache(
     url.searchParams.set("steamid", steamId);
     url.searchParams.set("appid", String(appId));
 
-    const data = await steamFetch<SteamPlayerAchievementsResponse>(url.toString());
+    const { data } = await steamFetch<SteamPlayerAchievementsResponse>(url.toString());
     return data?.playerstats?.achievements ?? [];
   },
 );
@@ -73,7 +86,7 @@ export const getGlobalAchievementPercentages = cache(
     url.searchParams.set("key", env.steamApiKey);
     url.searchParams.set("gameid", String(appId));
 
-    const data = await steamFetch<SteamGlobalAchievementsResponse>(url.toString());
+    const { data } = await steamFetch<SteamGlobalAchievementsResponse>(url.toString());
     return data?.achievementpercentages?.achievements ?? [];
   },
 );
@@ -84,7 +97,7 @@ export const getPlayerSummaries = cache(
     url.searchParams.set("key", env.steamApiKey);
     url.searchParams.set("steamids", steamIds.join(","));
 
-    const data = await steamFetch<SteamPlayerSummariesResponse>(url.toString());
+    const { data } = await steamFetch<SteamPlayerSummariesResponse>(url.toString());
     return data?.response?.players ?? [];
   },
 );
@@ -96,7 +109,7 @@ export const getFriendList = cache(
     url.searchParams.set("steamid", steamId);
     url.searchParams.set("relationship", "friend");
 
-    const data = await steamFetch<SteamFriendListResponse>(url.toString());
+    const { data } = await steamFetch<SteamFriendListResponse>(url.toString());
     return (data?.friendslist?.friends ?? []).map((f) => f.steamid);
   },
 );
