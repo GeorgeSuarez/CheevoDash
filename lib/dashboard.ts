@@ -308,9 +308,9 @@ export async function getDashboardData({
   range?: DateRange;
   today?: Date;
 }): Promise<DashboardData> {
-  const ownedGames = await getOwnedGames(steamId);
+  const result = await getOwnedGames(steamId);
 
-  if (ownedGames === null) {
+  if (!result.ok) {
     return {
       stats: {
         achievementsEarned: 0,
@@ -326,9 +326,11 @@ export async function getDashboardData({
       comparison: { you: 0, community: 0 },
       friends: [],
       games: [],
-      error: "private_profile",
+      error: result.reason,
     };
   }
+
+  const ownedGames = result.games;
 
   if (ownedGames.length === 0) {
     return {

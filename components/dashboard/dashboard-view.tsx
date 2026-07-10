@@ -111,10 +111,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                 {data.error === "private_profile" ? (
                   <EyeOff className="h-6 w-6 text-destructive" aria-hidden />
                 ) : (
-                  <AlertTriangle
-                    className="h-6 w-6 text-destructive"
-                    aria-hidden
-                  />
+                  <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
                 )}
               </div>
               <div>
