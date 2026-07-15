@@ -55,7 +55,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      <Sidebar user={data.user} games={data.games} />
+      <Sidebar user={data.user} activeHref="/" />
       <main
         className="flex-1 overflow-auto bg-background p-4 lg:p-8"
         aria-busy={isPending}
@@ -63,7 +63,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
         <div className="mx-auto max-w-7xl">
           {/* Mobile top bar */}
           <div className="-mx-4 mb-4 flex items-center gap-3 lg:hidden">
-            <MobileSidebar user={data.user} games={data.games} />
+            <MobileSidebar user={data.user} activeHref="/" />
             <h2 className="text-xl font-bold text-foreground">Overview</h2>
           </div>
 

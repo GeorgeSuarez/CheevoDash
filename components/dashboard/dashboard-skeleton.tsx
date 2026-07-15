@@ -15,18 +15,6 @@ function SidebarSkeleton() {
           <Skeleton key={i} className="h-10 w-full rounded-lg" />
         ))}
       </nav>
-      <div className="mt-6 flex flex-col gap-2 px-3">
-        <Skeleton className="h-3 w-20" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2">
-            <Skeleton className="h-9 w-[52px] shrink-0 rounded-md" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-3 w-12" />
-            </div>
-          </div>
-        ))}
-      </div>
       <div className="mt-auto">
         <Skeleton className="h-24 w-full rounded-xl" />
       </div>
