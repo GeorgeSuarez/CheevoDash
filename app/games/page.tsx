@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { GamesView } from "@/components/dashboard/games-view";
-import { getDashboardData } from "@/lib/dashboard";
+import { getGamesData } from "@/lib/dashboard";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +11,8 @@ export default async function GamesPage() {
     redirect("/login");
   }
 
-  const data = await getDashboardData({
+  const data = await getGamesData({
     steamId: session.steamId,
-    filter: "all",
-    range: "30d",
   });
 
   return (

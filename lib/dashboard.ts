@@ -21,6 +21,7 @@ function formatLabel(date: Date, range: DateRange): string {
 import type {
   AchievementDataPoint,
   DashboardData,
+  DashboardError,
   DateRange,
   Friend,
   Game,
@@ -368,8 +369,6 @@ export async function getDashboardData({
     };
   }
 
-  const trackedSet = await getTrackedAppIds(steamId);
-
   // Sort by playtime descending and split into detailed vs basic
   const sorted = [...ownedGames].sort(
     (a, b) => b.playtime_forever - a.playtime_forever,
@@ -378,23 +377,32 @@ export async function getDashboardData({
     (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
   );
   const detailedSlice = detailedCandidates.slice(0, MAX_DETAILED_GAMES);
-  const basicSlice = sorted.filter((g) => !detailedSlice.includes(g));
+  const detailedIds = new Set(detailedSlice.map((g) => g.appid));
+  const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
 
-  // Fetch achievement data only for the top games (expensive: 2 API calls each)
-  const detailedGames = await mapWithConcurrency(
-    detailedSlice,
-    CONCURRENCY,
-    async (owned) => {
-      const data = await fetchGameData(steamId, owned.appid);
-      return buildGame(
-        owned.appid,
-        owned.name,
-        owned.playtime_forever,
-        data,
-        trackedSet.has(owned.appid),
-      );
-    },
-  );
+  // Fetch tracked IDs in parallel with game achievement data
+  const [trackedSet, detailedGames] = await Promise.all([
+    getTrackedAppIds(steamId),
+    mapWithConcurrency(
+      detailedSlice,
+      CONCURRENCY,
+      async (owned) => {
+        const data = await fetchGameData(steamId, owned.appid);
+        return buildGame(
+          owned.appid,
+          owned.name,
+          owned.playtime_forever,
+          data,
+          false, // placeholder, replaced below
+        );
+      },
+    ),
+  ]);
+
+  // Patch tracked flag after parallel fetch completes
+  for (const game of detailedGames) {
+    game.tracked = trackedSet.has(game.appId);
+  }
 
   // Create basic game objects for the rest (no API calls)
   const basicGames: Game[] = basicSlice.map((owned) => ({
@@ -443,21 +451,105 @@ export async function getDashboardData({
   const comparison = { you: stats.avgCompletion, community: safeCommunityAvg };
   const games = [...filtered].sort((a, b) => b.hours - a.hours);
   const topGameWithAch = games.find((g) => g.achievements.total > 0);
-  const friends = topGameWithAch
-    ? await getFriendsComparison(steamId, topGameWithAch.appId, 5)
-    : [];
 
-  const todayStr = today.toISOString().slice(0, 10);
-  const snapshot = await getLatestSnapshot(steamId, todayStr);
+  // Run friends, snapshot, and user info in parallel (all independent)
+  const [friends, snapshot, user] = await Promise.all([
+    topGameWithAch
+      ? getFriendsComparison(steamId, topGameWithAch.appId, 5)
+      : Promise.resolve([] as Friend[]),
+    getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
+    getUserInfo(steamId),
+  ]);
+
   if (snapshot) {
     stats.avgCompletionDelta =
       Math.round((stats.avgCompletion - snapshot.avgCompletion) * 10) / 10;
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
+  return { stats, achievementSeries, comparison, friends, games, error: null, user };
+}
+
+// --- Lightweight games-only entry point ---
+
+export interface GamesData {
+  games: Game[];
+  user?: { personaName: string; avatar: string };
+  error: DashboardError;
+}
+
+export async function getGamesData({
+  steamId,
+}: {
+  steamId: string;
+}): Promise<GamesData> {
+  const result = await getOwnedGames(steamId);
+
+  if (!result.ok) {
+    return {
+      games: [],
+      error: { type: result.reason, status: result.status ?? undefined },
+    };
+  }
+
+  const ownedGames = result.games;
+  if (ownedGames.length === 0) {
+    return { games: [], error: null };
+  }
+
+  const sorted = [...ownedGames].sort(
+    (a, b) => b.playtime_forever - a.playtime_forever,
+  );
+  const detailedCandidates = sorted.filter(
+    (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
+  );
+  const detailedSlice = detailedCandidates.slice(0, MAX_DETAILED_GAMES);
+  const detailedIds = new Set(detailedSlice.map((g) => g.appid));
+  const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
+
+  const [trackedSet, detailedGames] = await Promise.all([
+    getTrackedAppIds(steamId),
+    mapWithConcurrency(
+      detailedSlice,
+      CONCURRENCY,
+      async (owned) => {
+        const data = await fetchGameData(steamId, owned.appid);
+        return buildGame(
+          owned.appid,
+          owned.name,
+          owned.playtime_forever,
+          data,
+          false,
+        );
+      },
+    ),
+  ]);
+
+  for (const game of detailedGames) {
+    game.tracked = trackedSet.has(game.appId);
+  }
+
+  const basicGames: Game[] = basicSlice.map((owned) => ({
+    id: String(owned.appid),
+    appId: owned.appid,
+    name: owned.name,
+    hours: Math.round(owned.playtime_forever / 60),
+    completion: 0,
+    achievements: { earned: 0, total: 0 },
+    comparison: { text: "No data", percent: 0, isPositive: false },
+    image: getGameHeaderImage(owned.appid),
+    owned: true,
+    tracked: trackedSet.has(owned.appid),
+    unlocktimes: [],
+  }));
+
+  const games = [...detailedGames, ...basicGames].sort(
+    (a, b) => b.hours - a.hours,
+  );
+
   const user = await getUserInfo(steamId);
 
-  return { stats, achievementSeries, comparison, friends, games, error: null, user };
+  return { games, user, error: null };
 }
 
 // --- Per-game friends comparison ---
