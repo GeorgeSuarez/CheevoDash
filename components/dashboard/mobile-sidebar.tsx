@@ -10,8 +10,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/dashboard/sidebar";
+import type { Game } from "@/lib/types";
 
-export function MobileSidebar({ user }: { user?: { personaName: string; avatar: string } }) {
+export function MobileSidebar({
+  user,
+  games,
+}: {
+  user?: { personaName: string; avatar: string };
+  games?: Game[];
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,7 +37,7 @@ export function MobileSidebar({ user }: { user?: { personaName: string; avatar: 
       </SheetTrigger>
       <SheetContent side="left" className="w-72 border-r border-sidebar-border bg-sidebar p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <SidebarContent user={user} />
+        <SidebarContent user={user} games={games} />
       </SheetContent>
     </Sheet>
   );
