@@ -118,7 +118,9 @@ export function FriendsComparison({
           </div>
         ) : (
           <>
-            {friends.map((friend) => (
+            {friends
+              .filter((f) => f.isYou || f.percent > 0)
+              .map((friend) => (
               <div key={friend.id} className="flex items-center gap-3">
                 <Avatar className="h-9 w-9 border border-border/50">
                   {friend.avatar && <AvatarImage src={friend.avatar} />}
