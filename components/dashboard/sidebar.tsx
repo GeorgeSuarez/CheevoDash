@@ -9,7 +9,6 @@ import {
   GitCompare,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -22,7 +21,7 @@ const navItems = [
   { icon: Settings, label: "Settings" },
 ];
 
-export function SidebarContent() {
+export function SidebarContent({ user }: { user?: { personaName: string; avatar: string } }) {
   return (
     <div className="flex flex-col px-4 py-6">
       <div className="flex items-center gap-3 px-2">
@@ -58,7 +57,18 @@ export function SidebarContent() {
         ))}
       </nav>
 
-      <div className="flex flex-col">
+      <div className="mt-auto flex flex-col gap-4">
+        {user && (
+          <div className="flex items-center gap-3 px-2">
+            <Avatar className="h-9 w-9 border border-sidebar-border">
+              <AvatarImage src={user.avatar} />
+              <AvatarFallback>{user.personaName.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{user.personaName}</p>
+            </div>
+          </div>
+        )}
         <form action="/auth/logout" method="post">
           <button
             type="submit"
@@ -73,10 +83,10 @@ export function SidebarContent() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ user }: { user?: { personaName: string; avatar: string } }) {
   return (
     <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar lg:flex lg:flex-col">
-      <SidebarContent />
+      <SidebarContent user={user} />
     </aside>
   );
 }

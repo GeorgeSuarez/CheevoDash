@@ -69,6 +69,10 @@ export interface DashboardData {
   friends: Friend[];
   games: Game[];
   error: DashboardError;
+  user?: {
+    personaName: string;
+    avatar: string;
+  };
 }
 
 export interface DashboardQuery {

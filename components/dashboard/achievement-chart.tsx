@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -19,26 +20,40 @@ import {
 } from "recharts";
 import type { AchievementDataPoint } from "@/lib/types";
 
+type Metric = "percent" | "count";
+
 export function AchievementChart({
   series,
+  totalAchievements,
 }: {
   series: AchievementDataPoint[];
+  totalAchievements?: number;
 }) {
+  const [metric, setMetric] = useState<Metric>("percent");
+
+  const chartData = series.map((point) => ({
+    ...point,
+    displayValue: metric === "count" 
+      ? Math.round((point.you / 100) * (totalAchievements || 0))
+      : point.you,
+    communityValue: metric === "count"
+      ? Math.round((point.community / 100) * (totalAchievements || 0))
+      : point.community,
+  }));
+
   return (
     <Card className="col-span-12 border-border/50 bg-card lg:col-span-7">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold">
           Achievement Progress Over Time
         </CardTitle>
-        <Select defaultValue="Percent Completion">
+        <Select value={metric} onValueChange={(v) => setMetric(v as Metric)}>
           <SelectTrigger className="h-8 w-46 border-border/50 bg-background text-xs">
             <SelectValue placeholder="Select metric" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Percent Completion">
-              Percent Completion
-            </SelectItem>
-            <SelectItem value="Achievement Count">Achievement Count</SelectItem>
+            <SelectItem value="percent">Percent Completion</SelectItem>
+            <SelectItem value="count">Achievement Count</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
@@ -60,7 +75,7 @@ export function AchievementChart({
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={series}
+              data={chartData}
               margin={{ top: 5, right: 16, bottom: 0, left: -16 }}
             >
               <CartesianGrid
@@ -81,8 +96,8 @@ export function AchievementChart({
                 tick={{ fill: "currentColor", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => `${value}%`}
-                domain={[0, 100]}
+                tickFormatter={(value) => metric === "percent" ? `${value}%` : value}
+                domain={[0, metric === "percent" ? 100 : "auto"]}
                 className="text-muted-foreground"
               />
               <Tooltip
@@ -93,10 +108,11 @@ export function AchievementChart({
                 }}
                 itemStyle={{ color: "var(--foreground)" }}
                 labelStyle={{ color: "var(--muted-foreground)" }}
+                formatter={(value) => metric === "percent" ? `${value}%` : value}
               />
               <Line
                 type="monotone"
-                dataKey="you"
+                dataKey="displayValue"
                 stroke="currentColor"
                 strokeWidth={3}
                 dot={false}
@@ -105,7 +121,7 @@ export function AchievementChart({
               />
               <Line
                 type="monotone"
-                dataKey="community"
+                dataKey="communityValue"
                 stroke="currentColor"
                 strokeWidth={2}
                 strokeDasharray="6 6"
@@ -119,16 +135,16 @@ export function AchievementChart({
           <thead>
             <tr>
               <th scope="col">Date</th>
-              <th scope="col">You (%)</th>
-              <th scope="col">Community average (%)</th>
+              <th scope="col">You</th>
+              <th scope="col">Community average</th>
             </tr>
           </thead>
           <tbody>
             {series.map((point) => (
               <tr key={point.date}>
                 <td>{point.date}</td>
-                <td>{point.you}</td>
-                <td>{point.community}</td>
+                <td>{point.you}%</td>
+                <td>{point.community}%</td>
               </tr>
             ))}
           </tbody>

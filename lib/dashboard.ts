@@ -1,6 +1,6 @@
 import { and, eq, lt, desc } from "drizzle-orm";
 import { getDb } from "./db/client";
-import { snapshots, trackedGames } from "./db/schema";
+import { snapshots, trackedGames, users } from "./db/schema";
 import {
   getFriendList,
   getGameHeaderImage,
@@ -241,6 +241,22 @@ async function getTrackedAppIds(steamId: string): Promise<Set<number>> {
   }
 }
 
+async function getUserInfo(steamId: string): Promise<{ personaName: string; avatar: string } | undefined> {
+  try {
+    const rows = await getDb()
+      .select({ personaName: users.personaName, avatar: users.avatar })
+      .from(users)
+      .where(eq(users.steamId, steamId))
+      .limit(1);
+    if (rows.length > 0 && rows[0].personaName && rows[0].avatar) {
+      return { personaName: rows[0].personaName, avatar: rows[0].avatar };
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // --- Snapshots for delta computation ---
 
 interface SnapshotData {
@@ -439,7 +455,9 @@ export async function getDashboardData({
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
-  return { stats, achievementSeries, comparison, friends, games, error: null };
+  const user = await getUserInfo(steamId);
+
+  return { stats, achievementSeries, comparison, friends, games, error: null, user };
 }
 
 // --- Per-game friends comparison ---

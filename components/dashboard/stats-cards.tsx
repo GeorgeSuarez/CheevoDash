@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, Users, Gamepad2, TrendingUp } from "lucide-react";
+import { Trophy, Users, Gamepad2, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Stats } from "@/lib/types";
 
@@ -92,8 +92,9 @@ export function StatsCards({ stats }: { stats: Stats }) {
         value={(stats.achievementsEarned || 0).toLocaleString()}
         subtext={
           stats.achievementsEarnedDelta != null ? (
-            <span className="flex items-center gap-1 text-green-400">
-              <TrendingUp className="h-3 w-3" /> {stats.achievementsEarnedDelta} this month
+            <span className={cn("flex items-center gap-1", stats.achievementsEarnedDelta >= 0 ? "text-green-400" : "text-red-400")}>
+              {stats.achievementsEarnedDelta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />} 
+              {Math.abs(stats.achievementsEarnedDelta)} this month
             </span>
           ) : (
             <span className="text-muted-foreground">All time total</span>
@@ -112,8 +113,9 @@ export function StatsCards({ stats }: { stats: Stats }) {
               {stats.avgCompletion || 0}%
             </p>
             {stats.avgCompletionDelta != null ? (
-              <span className="mt-1 flex items-center gap-1 text-xs text-green-400">
-                <TrendingUp className="h-3 w-3" /> {stats.avgCompletionDelta}% vs last month
+              <span className={cn("mt-1 flex items-center gap-1 text-xs", stats.avgCompletionDelta >= 0 ? "text-green-400" : "text-red-400")}>
+                {stats.avgCompletionDelta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />} 
+                {Math.abs(stats.avgCompletionDelta)}% vs last month
               </span>
             ) : (
               <span className="mt-1 block text-xs text-muted-foreground">
@@ -132,7 +134,9 @@ export function StatsCards({ stats }: { stats: Stats }) {
         subtext={
           stats.gamesOwnedDelta != null ? (
             <span className="text-muted-foreground">
-              <span className="text-green-400">+{stats.gamesOwnedDelta}</span> this month
+              <span className={cn(stats.gamesOwnedDelta >= 0 ? "text-green-400" : "text-red-400")}>
+                {stats.gamesOwnedDelta >= 0 ? "+" : ""}{stats.gamesOwnedDelta}
+              </span> this month
             </span>
           ) : (
             <span className="text-muted-foreground">In your library</span>

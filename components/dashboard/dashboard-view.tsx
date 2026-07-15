@@ -55,7 +55,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      <Sidebar />
+      <Sidebar user={data.user} />
       <main
         className="flex-1 overflow-auto bg-background p-4 lg:p-8"
         aria-busy={isPending}
@@ -63,7 +63,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
         <div className="mx-auto max-w-7xl">
           {/* Mobile top bar */}
           <div className="-mx-4 mb-4 flex items-center gap-3 lg:hidden">
-            <MobileSidebar />
+            <MobileSidebar user={data.user} />
             <h2 className="text-xl font-bold text-foreground">Overview</h2>
           </div>
 
@@ -84,9 +84,9 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Games">All Games</SelectItem>
-                  <SelectItem value="Owned Games">Owned Games</SelectItem>
-                  <SelectItem value="Tracked Games">Tracked Games</SelectItem>
+                  <SelectItem value="all">All Games</SelectItem>
+                  <SelectItem value="owned">Owned Games</SelectItem>
+                  <SelectItem value="tracked">Tracked Games</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={range} onValueChange={onRangeChange}>
@@ -128,18 +128,27 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               </div>
             </div>
           ) : (
-            <div
-              className={
-                isPending
-                  ? "opacity-30 transition-opacity duration-200"
-                  : "transition-opacity duration-200"
-              }
-            >
-              <StatsCards stats={data.stats} />
+            <div className="relative">
+              {isPending && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
+                  <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
+                    <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating data...
+                  </div>
+                </div>
+              )}
+              <div className={isPending ? "pointer-events-none opacity-50" : "transition-opacity duration-200"}>
+                <StatsCards stats={data.stats} />
 
               {/* Charts row */}
               <div className="mt-6 grid grid-cols-12 gap-6">
-                <AchievementChart series={data.achievementSeries} />
+                <AchievementChart 
+                  series={data.achievementSeries} 
+                  totalAchievements={data.games.reduce((sum, g) => sum + g.achievements.total, 0)} 
+                />
                 <div className="col-span-12 grid grid-cols-1 gap-6 lg:col-span-5">
                   <ComparisonChart comparison={data.comparison} />
                   <FriendsComparison
@@ -174,6 +183,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                   </p>
                 </div>
               </div>
+            </div>
             </div>
           )}
         </div>

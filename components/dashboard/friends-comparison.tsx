@@ -67,7 +67,7 @@ export function FriendsComparison({
             </SelectTrigger>
             <SelectContent>
               {gamesWithAchievements.slice(0, 20).map((game) => (
-                <SelectItem key={game.appId} value={game.name}>
+                <SelectItem key={game.appId} value={String(game.appId)}>
                   {game.name}
                 </SelectItem>
               ))}

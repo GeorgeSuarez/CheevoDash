@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Clock, ArrowRight, ArrowUp, ArrowDown, Gamepad2, Bookmark, BookmarkCheck } from "lucide-react";
+import { Trophy, Clock, ArrowUp, ArrowDown, Gamepad2, Bookmark, BookmarkCheck } from "lucide-react";
 import Image from "next/image";
 import type { Game } from "@/lib/types";
 
@@ -24,13 +24,6 @@ export function TopGames({
     <Card className="border-border/50 bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold">Top Games</CardTitle>
-        <Button
-          variant="ghost"
-          className="group h-auto p-0 text-sm font-medium text-primary hover:bg-transparent hover:text-primary/80"
-        >
-          View All Games
-          <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </Button>
       </CardHeader>
       <CardContent className="pt-2">
         {topGames.length === 0 ? (
@@ -136,19 +129,26 @@ function TopGameRow({
         </div>
       </td>
       <td className="py-4">
-        <div className="w-32">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="font-semibold text-foreground">
-              {game.completion}%
-            </span>
+          <div className="w-32">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="font-semibold text-foreground">
+                {game.completion}%
+              </span>
+            </div>
+            <div 
+              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={game.completion}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${game.completion}% completion`}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${game.completion}%` }}
+              />
+            </div>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${game.completion}%` }}
-            />
-          </div>
-        </div>
       </td>
       <td className="py-4">
         <div className="flex items-center gap-2 text-foreground">

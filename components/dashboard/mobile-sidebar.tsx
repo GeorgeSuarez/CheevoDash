@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/dashboard/sidebar";
 
-export function MobileSidebar() {
+export function MobileSidebar({ user }: { user?: { personaName: string; avatar: string } }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 border-r border-sidebar-border bg-sidebar p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <SidebarContent />
+        <SidebarContent user={user} />
       </SheetContent>
     </Sheet>
   );
