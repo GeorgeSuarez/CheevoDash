@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,9 +30,14 @@ export function FriendsComparison({
   );
   const [friends, setFriends] = useState<Friend[]>(initialFriends);
   const [isPending, startTransition] = useTransition();
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (!selectedAppId) return;
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     startTransition(async () => {
       try {
         const params = new URLSearchParams({

@@ -36,3 +36,15 @@ export const snapshots = sqliteTable("snapshots", {
   avgCompletion: integer("avg_completion").notNull(),
   gamesOwned: integer("games_owned").notNull(),
 });
+
+export const globalGameSnapshots = sqliteTable(
+  "global_game_snapshots",
+  {
+    appId: integer("app_id").notNull(),
+    date: text("date").notNull(),
+    avgCompletion: integer("avg_completion").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.appId, table.date] }),
+  }),
+);

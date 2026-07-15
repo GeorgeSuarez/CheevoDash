@@ -28,14 +28,14 @@ async function LoginContent({
     : null;
 
   return (
-    <div className="flex w-full flex-col min-h-screen items-center justify-center gap-8 bg-background">
+    <main className="flex w-full flex-col min-h-screen items-center justify-center gap-8 bg-background">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary">
           <Gamepad2 className="h-8 w-8 text-primary-foreground" aria-hidden />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-foreground">CheevoDash</h1>
-          <p className="mt-2 max-w-sm text-lg text-muted-foreground">
+          <p className="mt-2 max-w-sm text-base text-muted-foreground">
             Sign in with Steam to track your achievements and compare your
             progress with friends.
           </p>
@@ -59,11 +59,11 @@ async function LoginContent({
         Sign in through Steam
       </a>
 
-      <p className="max-w-sm text-center text-lg text-muted-foreground">
+      <p className="max-w-sm text-center text-sm text-muted-foreground">
         Your Steam profile and game details must be public for achievement
         tracking to work.
       </p>
-    </div>
+    </main>
   );
 }
 

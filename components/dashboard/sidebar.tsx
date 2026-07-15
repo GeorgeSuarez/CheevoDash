@@ -15,11 +15,35 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", href: "/", active: true },
   { icon: Gamepad2, label: "Games", href: "/games" },
-  { icon: Trophy, label: "Achievements", href: "#" },
-  { icon: GitCompare, label: "Comparisons", href: "#" },
-  { icon: Users, label: "Friends", href: "#" },
-  { icon: BarChart3, label: "Insights", href: "#" },
-  { icon: Settings, label: "Settings", href: "#" },
+  {
+    icon: Trophy,
+    label: "Achievements",
+    href: "#",
+    disabled: true,
+    badge: "Soon",
+  },
+  {
+    icon: GitCompare,
+    label: "Comparisons",
+    href: "#",
+    disabled: true,
+    badge: "Soon",
+  },
+  { icon: Users, label: "Friends", href: "#", disabled: true, badge: "Soon" },
+  {
+    icon: BarChart3,
+    label: "Insights",
+    href: "#",
+    disabled: true,
+    badge: "Soon",
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    href: "#",
+    disabled: true,
+    badge: "Soon",
+  },
 ];
 
 export function SidebarContent({
@@ -47,8 +71,23 @@ export function SidebarContent({
 
       <nav aria-label="Primary" className="mt-8 flex flex-col gap-1">
         {navItems.map((item) => {
-          const isActive = item.href === activeHref;
-          return (
+          const isActive = !item.disabled && item.href === activeHref;
+          return item.disabled ? (
+            <span
+              key={item.label}
+              className="flex cursor-not-allowed items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/50"
+              aria-disabled="true"
+              title="Coming soon"
+            >
+              <span className="flex items-center gap-3">
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </span>
+              <span className="rounded bg-sidebar-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-accent-foreground">
+                {item.badge}
+              </span>
+            </span>
+          ) : (
             <Link
               key={item.label}
               href={item.href}
@@ -67,27 +106,31 @@ export function SidebarContent({
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-4">
-        {user && (
-          <div className="flex items-center gap-3 px-2">
-            <Avatar className="h-9 w-9 border border-sidebar-border">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback>{user.personaName.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user.personaName}</p>
-            </div>
-          </div>
-        )}
-        <form action="/auth/logout" method="post">
+      <div className="mt-auto flex flex-col">
+        <form action="/auth/logout" method="post" className="mt-2">
           <button
             type="submit"
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <LogOut className="h-5 w-5" />
             Logout
           </button>
         </form>
+        {user && (
+          <div className="flex items-center gap-3 px-2 py-5">
+            <Avatar className="h-9 w-9 border border-sidebar-border">
+              <AvatarImage src={user.avatar} />
+              <AvatarFallback>
+                {user.personaName.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {user.personaName}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

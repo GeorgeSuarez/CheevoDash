@@ -7,8 +7,8 @@ export async function GET() {
   const params = new URLSearchParams({
     "openid.ns": "http://specs.openid.net/auth/2.0",
     "openid.mode": "checkid_setup",
-    "openid.return_to": `${env.appBaseUrl}/auth/steam/callback`,
-    "openid.realm": env.appBaseUrl,
+    "openid.return_to": `${env.steamCallbackBaseUrl}/auth/steam/callback`,
+    "openid.realm": env.steamCallbackBaseUrl,
     "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
     "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
     "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",

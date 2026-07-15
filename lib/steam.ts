@@ -27,7 +27,9 @@ async function steamFetch<T>(
     const res = await fetch(url, { next: { revalidate } });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      console.error(
+      const isPrivateProfile = res.status === 403 && body.includes("Profile is not public");
+      const log = isPrivateProfile ? console.warn : console.error;
+      log(
         `[steam] ${res.status} ${res.statusText} — ${url.slice(0, 120)}…`,
         body.slice(0, 300),
       );

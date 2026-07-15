@@ -28,4 +28,7 @@ export const env = {
   get appBaseUrl() {
     return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   },
+  get steamCallbackBaseUrl() {
+    return process.env.STEAM_CALLBACK_BASE_URL ?? this.appBaseUrl;
+  },
 };

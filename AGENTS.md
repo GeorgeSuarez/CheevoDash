@@ -31,20 +31,22 @@ Copy `.env.example` to `.env.local` and fill in:
 - `TURSO_AUTH_TOKEN` — Turso auth token (omit for local file DB)
 - `AUTH_SECRET` — random secret for signing session JWTs (`openssl rand -base64 32`)
 - `NEXT_PUBLIC_APP_URL` — public base URL, no trailing slash (used for OpenID return_to)
+- `STEAM_CALLBACK_BASE_URL` — optional override for the OpenID `return_to`/`realm` when using a tunnel during local dev (falls back to `NEXT_PUBLIC_APP_URL`)
 - `CRON_SECRET` — secret for the snapshot cron endpoint (`openssl rand -base64 32`)
 
 ## Architecture
 
-- `app/` — Next.js App Router: `page.tsx` (SSR, session-gated), `loading.tsx` (skeleton), `not-found.tsx`, `login/page.tsx` (Steam sign-in), `auth/steam/route.ts` + `auth/steam/callback/route.ts` (OpenID), `auth/logout/route.ts`, `api/dashboard/route.ts` (GET), `api/friends-comparison/route.ts` (GET per-game), `api/tracked-games/route.ts` (POST/DELETE toggle), `api/cron/snapshot/route.ts` (nightly snapshot writer), `robots.ts`, `sitemap.ts`.
+- `app/` — Next.js App Router: `page.tsx` (SSR, session-gated), `loading.tsx` (skeleton), `error.tsx` (global error boundary), `not-found.tsx`, `login/page.tsx` (Steam sign-in), `auth/steam/route.ts` + `auth/steam/callback/route.ts` (OpenID), `auth/logout/route.ts`, `api/dashboard/route.ts` (GET), `api/friends-comparison/route.ts` (GET per-game), `api/community-trend/route.ts` (GET per-game global trend), `api/tracked-games/route.ts` (POST/DELETE toggle), `api/cron/snapshot/route.ts` (nightly snapshot writer), `robots.ts`, `sitemap.ts`.
 - `lib/auth.ts` — session helpers (jose JWT in httpOnly cookie): `createSession`, `getSession`, `clearSession`.
 - `lib/env.ts` — typed, lazy env var access.
-- `lib/db/schema.ts` — Drizzle schema (`users`, `tracked_games`, `snapshots`).
+- `lib/db/schema.ts` — Drizzle schema (`users`, `tracked_games`, `snapshots`, `global_game_snapshots`).
 - `lib/db/client.ts` — Drizzle + libSQL/Turso client.
 - `drizzle/` — generated SQL migrations.
 - `lib/steam.ts` — typed, cached Steam Web API client (`unstable_cache` with tiered revalidation).
+- `lib/series.ts` — pure client-safe helpers: `reconstructSeries`, `buildCommunitySeries`, `formatLabel`, `bucketDates`.
 - `lib/dashboard.ts` — async data layer (`getDashboardData`); orchestrates Steam API + DB, returns typed `DashboardData` with error states.
 - `lib/types.ts` — shared TypeScript interfaces (UI + Steam raw types).
-- `components/dashboard/` — dashboard feature components (props-driven). `dashboard-view.tsx` is the client wrapper managing filter/range state. `friends-comparison.tsx` has a game picker. `top-games.tsx` has a track toggle.
+- `components/dashboard/` — dashboard feature components (props-driven). `dashboard-view.tsx` is the client wrapper managing filter/range state. `friends-comparison.tsx` has a game picker. `achievement-chart.tsx` has a game picker and per-game community-trend fetching. `top-games.tsx` has a track toggle.
 - `components/ui/` — shadcn/ui primitives.
 - `tests/` — Vitest unit tests + Steam API fixtures.
 
@@ -57,12 +59,13 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ## Snapshot cron
 
-A nightly cron job populates the `snapshots` table for delta computation (avg completion change, games owned change).
+A nightly cron job populates the `snapshots` table for delta computation (avg completion change, games owned change), and the `global_game_snapshots` table for per-game global achievement trends used by the Achievement Progress Over Time chart.
 
 - Endpoint: `GET /api/cron/snapshot` (requires `Authorization: Bearer <CRON_SECRET>`)
 - On Vercel: add a cron config in `vercel.json` hitting this endpoint daily.
 - Locally: `curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/snapshot`
 - Without snapshots, `avgCompletionDelta` and `gamesOwnedDelta` stay `null`.
+- Without `global_game_snapshots`, the per-game community line falls back to the current flat global average.
 
 ## Theme
 

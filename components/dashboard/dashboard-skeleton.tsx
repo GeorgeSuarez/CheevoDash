@@ -54,7 +54,7 @@ function ChartsSkeleton() {
       <div className="col-span-12 grid grid-cols-1 gap-6 lg:col-span-5">
         <div className="rounded-xl border border-border/50 bg-card p-6">
           <Skeleton className="mb-4 h-5 w-44" />
-          <Skeleton className="mx-auto h-[220px] w-[220px] rounded-full" />
+          <Skeleton className="mx-auto h-[220px] max-w-[220px] rounded-full" />
         </div>
         <div className="rounded-xl border border-border/50 bg-card p-6">
           <Skeleton className="mb-4 h-5 w-40" />

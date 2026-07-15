@@ -69,7 +69,7 @@ async function upsertUser(steamId: string): Promise<void> {
 
   await getDb().insert(users).values({
     steamId,
-    personaName: summary?.personaname ?? `Player ${steamId.slice(-4)}`,
+    personaName: summary?.personaname ?? `Player ${steamId.slice(-8)}`,
     avatar: summary?.avatarfull ?? null,
   });
 }
@@ -80,12 +80,16 @@ export async function GET(request: Request) {
 
   const isValid = await verifyOpenId(params);
   if (!isValid) {
-    return NextResponse.redirect(new URL("/login?error=auth_failed", env.appBaseUrl));
+    return NextResponse.redirect(
+      new URL("/login?error=auth_failed", env.steamCallbackBaseUrl),
+    );
   }
 
   const steamId = extractSteamId(params);
   if (!steamId) {
-    return NextResponse.redirect(new URL("/login?error=no_steamid", env.appBaseUrl));
+    return NextResponse.redirect(
+      new URL("/login?error=no_steamid", env.steamCallbackBaseUrl),
+    );
   }
 
   try {

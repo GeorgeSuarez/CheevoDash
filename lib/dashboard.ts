@@ -9,17 +9,8 @@ import {
   getPlayerAchievements,
   getPlayerSummaries,
 } from "./steam";
-function formatLabel(date: Date, range: DateRange): string {
-  if (range === "1y") {
-    return new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
+import { reconstructSeries } from "./series";
 import type {
-  AchievementDataPoint,
   DashboardData,
   DashboardError,
   DateRange,
@@ -29,6 +20,8 @@ import type {
   Stats,
   SteamGlobalAchievement,
 } from "./types";
+
+export { reconstructSeries } from "./series";
 
 const CONCURRENCY = 5;
 const MAX_DETAILED_GAMES = 50;
@@ -93,55 +86,9 @@ export function meanGlobalPercent(
   percentages: SteamGlobalAchievement[],
 ): number {
   if (percentages.length === 0) return 0;
-  const sum = percentages.reduce((acc, p) => acc + p.percent, 0);
-  return Math.round((sum / percentages.length) * 10) / 10;
-}
-
-export function reconstructSeries(
-  allUnlocktimes: number[],
-  totalAchievements: number,
-  communityAvg: number,
-  range: DateRange,
-  today: Date,
-): AchievementDataPoint[] {
-  const RANGE_DAYS: Record<DateRange, number> = {
-    "7d": 7,
-    "30d": 30,
-    "90d": 90,
-    "1y": 365,
-  };
-  const POINT_COUNT: Record<DateRange, number> = {
-    "7d": 4,
-    "30d": 11,
-    "90d": 13,
-    "1y": 12,
-  };
-
-  const days = RANGE_DAYS[range];
-  const pointCount = POINT_COUNT[range];
-  const sorted = [...allUnlocktimes].sort((a, b) => a - b);
-  const points: AchievementDataPoint[] = [];
-
-  for (let i = 0; i < pointCount; i++) {
-    const t = pointCount === 1 ? 1 : i / (pointCount - 1);
-    const dayOffset = Math.round(-days + days * t);
-    const date = new Date(today);
-    date.setDate(date.getDate() + dayOffset);
-    const bucketMs = date.getTime();
-    const unlockedByNow = sorted.filter((ut) => ut * 1000 <= bucketMs).length;
-    const youPercent =
-      totalAchievements === 0
-        ? 0
-        : Math.round((unlockedByNow / totalAchievements) * 1000) / 10;
-
-    points.push({
-      date: formatLabel(date, range),
-      you: Number.isNaN(youPercent) ? 0 : youPercent,
-      community: Number.isNaN(communityAvg) ? 0 : communityAvg,
-    });
-  }
-
-  return points;
+  const sum = percentages.reduce((acc, p) => acc + Number(p.percent), 0);
+  const mean = Math.round((sum / percentages.length) * 10) / 10;
+  return Number.isNaN(mean) ? 0 : mean;
 }
 
 // --- Concurrency-limited batch helper ---

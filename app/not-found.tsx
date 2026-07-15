@@ -4,7 +4,7 @@ import { Gamepad2 } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary">
         <Gamepad2 className="h-8 w-8 text-primary-foreground" aria-hidden />
       </div>
@@ -18,6 +18,6 @@ export default function NotFound() {
         </p>
       </div>
       <Button render={<Link href="/">Back to Dashboard</Link>} />
-    </div>
+    </main>
   );
 }

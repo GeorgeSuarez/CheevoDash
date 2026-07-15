@@ -190,7 +190,7 @@ export function GamesView({
 
           {/* Header */}
           <div className="pb-6">
-            <h2 className="hidden text-2xl font-bold text-foreground lg:block">
+            <h2 className="hidden text-2xl font-bold text-foreground lg:block" aria-hidden>
               Your Library
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">

@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import { AchievementChart } from "@/components/dashboard/achievement-chart";
-import { ComparisonChart } from "@/components/dashboard/comparison-chart";
+const AchievementChart = dynamic(
+  () => import("@/components/dashboard/achievement-chart").then((m) => m.AchievementChart),
+  { ssr: false },
+);
+const ComparisonChart = dynamic(
+  () => import("@/components/dashboard/comparison-chart").then((m) => m.ComparisonChart),
+  { ssr: false },
+);
 import { FriendsComparison } from "@/components/dashboard/friends-comparison";
 import { TopGames } from "@/components/dashboard/top-games";
 import {
@@ -70,7 +77,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
           {/* Header */}
           <div className="flex flex-col justify-between gap-4 pb-6 sm:flex-row sm:items-start">
             <div>
-              <h2 className="hidden text-2xl font-bold text-foreground lg:block">
+              <h2 className="hidden text-2xl font-bold text-foreground lg:block" aria-hidden>
                 Overview
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -145,9 +152,11 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
 
               {/* Charts row */}
               <div className="mt-6 grid grid-cols-12 gap-6">
-                <AchievementChart 
-                  series={data.achievementSeries} 
-                  totalAchievements={data.games.reduce((sum, g) => sum + g.achievements.total, 0)} 
+                <AchievementChart
+                  series={data.achievementSeries}
+                  totalAchievements={data.games.reduce((sum, g) => sum + g.achievements.total, 0)}
+                  games={data.games}
+                  range={range}
                 />
                 <div className="col-span-12 grid grid-cols-1 gap-6 lg:col-span-5">
                   <ComparisonChart comparison={data.comparison} />
