@@ -675,10 +675,6 @@ export async function getGameAchievements(
     ? ownedResult.games.find((g) => g.appid === appId)
     : undefined;
 
-  const gameName = playerAchievements[0]?.apiname
-    ? (owned?.name ?? "")
-    : "";
-
   const schemaMap = await getSchemaForGame(appId);
 
   const earnedCount = playerAchievements.filter((a) => a.achieved === 1).length;
@@ -703,7 +699,7 @@ export async function getGameAchievements(
   });
 
   return {
-    gameName: owned?.name ?? gameName,
+    gameName: owned?.name ?? "",
     gameImage: getGameHeaderImage(appId),
     appId,
     hours: owned ? Math.round(owned.playtime_forever / 60) : 0,

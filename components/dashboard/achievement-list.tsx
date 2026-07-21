@@ -29,7 +29,7 @@ function AchievementRow({
   return (
     <div
       className={
-        "flex items-center gap-4 border-t border-border/30 py-4 transition-colors hover:bg-white/[0.02]" +
+        "flex items-center gap-4 border-t border-border/30 py-4 transition-colors hover:bg-white/2" +
         (achievement.achieved ? "" : " opacity-60")
       }
     >
@@ -77,9 +77,7 @@ function AchievementRow({
           {achievement.achieved && achievement.unlocktime > 0 && (
             <span>{timeAgo(achievement.unlocktime)}</span>
           )}
-          <span>
-            {achievement.globalPercent.toFixed(1)}% of players
-          </span>
+          <span>{achievement.globalPercent.toFixed(1)}% of players</span>
         </div>
       </div>
       {achievement.achieved && (
@@ -93,11 +91,7 @@ function AchievementRow({
   );
 }
 
-export function AchievementList({
-  data,
-}: {
-  data: GameAchievementsData;
-}) {
+export function AchievementList({ data }: { data: GameAchievementsData }) {
   const { achievements } = data;
 
   const earned = achievements.filter((a) => a.achieved);
@@ -118,7 +112,7 @@ export function AchievementList({
 
           {/* Game header */}
           <div className="relative mb-6 overflow-hidden rounded-xl">
-            <div className="relative aspect-[460/215] w-full">
+            <div className="relative aspect-460/215 w-full">
               <Image
                 src={data.gameImage}
                 alt={data.gameName}
@@ -127,7 +121,7 @@ export function AchievementList({
                 priority
                 sizes="(max-width: 1024px) 100vw, 896px"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-background via-background/30 to-transparent" />
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-6">
               <h1 className="text-2xl font-bold text-white drop-shadow-lg">
@@ -158,7 +152,8 @@ export function AchievementList({
               <CardHeader className="pb-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-semibold">
-                    {achievements.length} Achievement{achievements.length !== 1 ? "s" : ""}
+                    {achievements.length} Achievement
+                    {achievements.length !== 1 ? "s" : ""}
                   </CardTitle>
                   <span className="text-xs text-muted-foreground">
                     {earned.length} unlocked &middot; {locked.length} locked
