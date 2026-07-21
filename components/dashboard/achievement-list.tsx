@@ -103,11 +103,11 @@ export function AchievementList({ data }: { data: GameAchievementsData }) {
         <div className="mx-auto max-w-4xl">
           {/* Back link */}
           <Link
-            href="/"
+            href="/games"
             className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
+            Back to games
           </Link>
 
           {/* Game header */}

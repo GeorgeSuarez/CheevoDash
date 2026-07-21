@@ -27,7 +27,7 @@ export function ComparisonChart({
       </CardHeader>
       <CardContent className="flex flex-col items-center pt-2">
         <div
-          className="relative h-[220px] w-full"
+          className="relative h-55 w-full"
           role="img"
           aria-label={`Achievement comparison: you ${comparison.you}% versus community average ${comparison.community}%.`}
         >
