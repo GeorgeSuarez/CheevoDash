@@ -10,6 +10,7 @@ import type {
   SteamPlayerAchievementsResponse,
   SteamPlayerSummary,
   SteamPlayerSummariesResponse,
+  SteamSchemaResponse,
 } from "./types";
 
 const STEAM_API_BASE = "https://api.steampowered.com";
@@ -120,3 +121,26 @@ export const getFriendList = cache(
 export function getGameHeaderImage(appId: number): string {
   return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
 }
+
+export const getSchemaForGame = cache(
+  async (appId: number): Promise<Map<string, { displayName: string; description: string; icon: string }>> => {
+    const url = new URL(
+      `${STEAM_API_BASE}/ISteamUserStats/GetSchemaForGame/v2/`,
+    );
+    url.searchParams.set("key", env.steamApiKey);
+    url.searchParams.set("appid", String(appId));
+    url.searchParams.set("l", "english");
+
+    const { data } = await steamFetch<SteamSchemaResponse>(url.toString(), 3600);
+    const achievements = data?.game?.availableGameStats?.achievements ?? [];
+    const map = new Map<string, { displayName: string; description: string; icon: string }>();
+    for (const ach of achievements) {
+      map.set(ach.name, {
+        displayName: ach.displayName,
+        description: ach.description,
+        icon: ach.icon,
+      });
+    }
+    return map;
+  },
+);

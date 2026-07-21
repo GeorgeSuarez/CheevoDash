@@ -8,6 +8,7 @@ import {
   getOwnedGames,
   getPlayerAchievements,
   getPlayerSummaries,
+  getSchemaForGame,
 } from "./steam";
 import { reconstructSeries } from "./series";
 import type {
@@ -17,6 +18,7 @@ import type {
   Friend,
   Game,
   GameFilter,
+  RecentAchievement,
   Stats,
   SteamGlobalAchievement,
 } from "./types";
@@ -113,6 +115,7 @@ interface GameData {
   achievements: { earned: number; total: number };
   unlocktimes: number[];
   communityAvg: number;
+  earnedEntries: { apiname: string; unlocktime: number }[];
 }
 
 async function fetchGameData(
@@ -130,10 +133,15 @@ async function fetchGameData(
     .filter((a) => a.achieved === 1 && a.unlocktime > 0)
     .map((a) => a.unlocktime);
 
+  const earnedEntries = playerAchievements
+    .filter((a) => a.achieved === 1 && a.unlocktime > 0)
+    .map((a) => ({ apiname: a.apiname, unlocktime: a.unlocktime }));
+
   return {
     achievements: { earned, total },
     unlocktimes,
     communityAvg: meanGlobalPercent(globalPercentages),
+    earnedEntries,
   };
 }
 
@@ -259,6 +267,40 @@ export async function snapshotUser(steamId: string): Promise<void> {
   await writeSnapshot(steamId, data.stats);
 }
 
+// --- Recent achievements ---
+
+const RECENT_ACHIEVEMENTS_LIMIT = 5;
+
+async function computeRecentAchievements(
+  entries: { appId: number; gameName: string; apiname: string; unlocktime: number }[],
+): Promise<RecentAchievement[]> {
+  const top = [...entries]
+    .sort((a, b) => b.unlocktime - a.unlocktime)
+    .slice(0, RECENT_ACHIEVEMENTS_LIMIT);
+
+  const uniqueAppIds = [...new Set(top.map((e) => e.appId))];
+  const schemaMaps = await Promise.all(
+    uniqueAppIds.map((appId) => getSchemaForGame(appId)),
+  );
+  const schemaByAppId = new Map<number, Map<string, { displayName: string; description: string; icon: string }>>();
+  uniqueAppIds.forEach((appId, i) => {
+    schemaByAppId.set(appId, schemaMaps[i]);
+  });
+
+  return top.map((entry) => {
+    const schema = schemaByAppId.get(entry.appId)?.get(entry.apiname);
+    return {
+      appId: entry.appId,
+      gameName: entry.gameName,
+      gameImage: getGameHeaderImage(entry.appId),
+      name: schema?.displayName ?? entry.apiname,
+      description: schema?.description,
+      icon: schema?.icon,
+      unlocktime: entry.unlocktime,
+    };
+  });
+}
+
 // --- Main entry point ---
 
 export async function getDashboardData({
@@ -290,6 +332,7 @@ export async function getDashboardData({
       comparison: { you: 0, community: 0 },
       friends: [],
       games: [],
+      recentAchievements: [],
       error: { type: result.reason, status: result.status ?? undefined },
     };
   }
@@ -312,6 +355,7 @@ export async function getDashboardData({
       comparison: { you: 0, community: 0 },
       friends: [],
       games: [],
+      recentAchievements: [],
       error: null,
     };
   }
@@ -328,23 +372,26 @@ export async function getDashboardData({
   const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
 
   // Fetch tracked IDs in parallel with game achievement data
-  const [trackedSet, detailedGames] = await Promise.all([
+  const [trackedSet, detailedResults] = await Promise.all([
     getTrackedAppIds(steamId),
     mapWithConcurrency(
       detailedSlice,
       CONCURRENCY,
       async (owned) => {
         const data = await fetchGameData(steamId, owned.appid);
-        return buildGame(
+        const game = buildGame(
           owned.appid,
           owned.name,
           owned.playtime_forever,
           data,
           false, // placeholder, replaced below
         );
+        return { game, earnedEntries: data.earnedEntries };
       },
     ),
   ]);
+
+  const detailedGames = detailedResults.map((r) => r.game);
 
   // Patch tracked flag after parallel fetch completes
   for (const game of detailedGames) {
@@ -399,6 +446,20 @@ export async function getDashboardData({
   const games = [...filtered].sort((a, b) => b.hours - a.hours);
   const topGameWithAch = games.find((g) => g.achievements.total > 0);
 
+  // Collect all earned achievement entries for recent achievements
+  const allEarnedEntries = detailedResults.flatMap((r) =>
+    r.earnedEntries.map((e) => ({
+      appId: r.game.appId,
+      gameName: r.game.name,
+      apiname: e.apiname,
+      unlocktime: e.unlocktime,
+    })),
+  );
+  const recentAchievements =
+    allEarnedEntries.length === 0
+      ? []
+      : await computeRecentAchievements(allEarnedEntries);
+
   // Run friends, snapshot, and user info in parallel (all independent)
   const [friends, snapshot, user] = await Promise.all([
     topGameWithAch
@@ -414,7 +475,7 @@ export async function getDashboardData({
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
-  return { stats, achievementSeries, comparison, friends, games, error: null, user };
+  return { stats, achievementSeries, comparison, friends, games, recentAchievements, error: null, user };
 }
 
 // --- Lightweight games-only entry point ---

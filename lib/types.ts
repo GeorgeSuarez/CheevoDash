@@ -62,12 +62,23 @@ export type DashboardError = {
   status?: number;
 } | null;
 
+export interface RecentAchievement {
+  appId: number;
+  gameName: string;
+  gameImage: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  unlocktime: number;
+}
+
 export interface DashboardData {
   stats: Stats;
   achievementSeries: AchievementDataPoint[];
   comparison: ComparisonData;
   friends: Friend[];
   games: Game[];
+  recentAchievements: RecentAchievement[];
   error: DashboardError;
   user?: {
     personaName: string;
@@ -147,5 +158,26 @@ export interface SteamFriend {
 export interface SteamFriendListResponse {
   friendslist: {
     friends: SteamFriend[];
+  };
+}
+
+export interface SteamSchemaAchievement {
+  name: string;
+  defaultvalue: number;
+  displayName: string;
+  hidden: number;
+  description: string;
+  icon: string;
+  icongray: string;
+}
+
+export interface SteamSchemaResponse {
+  game: {
+    gameName: string;
+    gameVersion: string;
+    availableGameStats: {
+      stats: unknown[];
+      achievements: SteamSchemaAchievement[];
+    };
   };
 }

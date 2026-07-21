@@ -14,6 +14,7 @@ const ComparisonChart = dynamic(
   { ssr: false },
 );
 import { FriendsComparison } from "@/components/dashboard/friends-comparison";
+import { RecentAchievements } from "@/components/dashboard/recent-achievements";
 import { TopGames } from "@/components/dashboard/top-games";
 import {
   Select,
@@ -165,6 +166,11 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                     games={data.games}
                   />
                 </div>
+              </div>
+
+              {/* Recent achievements */}
+              <div className="mt-6">
+                <RecentAchievements achievements={data.recentAchievements} />
               </div>
 
               {/* Top games */}
