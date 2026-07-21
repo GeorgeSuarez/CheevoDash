@@ -17,6 +17,7 @@ import type {
   DateRange,
   Friend,
   Game,
+  GameAchievement,
   GameFilter,
   RecentAchievement,
   Stats,
@@ -282,7 +283,7 @@ async function computeRecentAchievements(
   const schemaMaps = await Promise.all(
     uniqueAppIds.map((appId) => getSchemaForGame(appId)),
   );
-  const schemaByAppId = new Map<number, Map<string, { displayName: string; description: string; icon: string }>>();
+  const schemaByAppId = new Map<number, Map<string, { displayName: string; description: string; icon: string; icongray: string }>>();
   uniqueAppIds.forEach((appId, i) => {
     schemaByAppId.set(appId, schemaMaps[i]);
   });
@@ -626,3 +627,90 @@ export async function getFriendsComparison(
 
 export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
 export const DASHBOARD_RANGES: DateRange[] = ["7d", "30d", "90d", "1y"];
+
+// --- Per-game achievement list ---
+
+export interface GameAchievementsData {
+  gameName: string;
+  gameImage: string;
+  appId: number;
+  hours: number;
+  totalAchievements: number;
+  earnedAchievements: number;
+  completion: number;
+  achievements: GameAchievement[];
+  error: DashboardError;
+}
+
+export async function getGameAchievements(
+  steamId: string,
+  appId: number,
+): Promise<GameAchievementsData> {
+  const [playerAchievements, globalPercentages, ownedResult] = await Promise.all([
+    getPlayerAchievements(steamId, appId),
+    getGlobalAchievementPercentages(appId),
+    getOwnedGames(steamId),
+  ]);
+
+  if (playerAchievements.length === 0) {
+    return {
+      gameName: "",
+      gameImage: getGameHeaderImage(appId),
+      appId,
+      hours: 0,
+      totalAchievements: 0,
+      earnedAchievements: 0,
+      completion: 0,
+      achievements: [],
+      error: null,
+    };
+  }
+
+  const globalPctMap = new Map<string, number>();
+  for (const g of globalPercentages) {
+    globalPctMap.set(g.name, Number(g.percent));
+  }
+
+  const owned = ownedResult.ok
+    ? ownedResult.games.find((g) => g.appid === appId)
+    : undefined;
+
+  const gameName = playerAchievements[0]?.apiname
+    ? (owned?.name ?? "")
+    : "";
+
+  const schemaMap = await getSchemaForGame(appId);
+
+  const earnedCount = playerAchievements.filter((a) => a.achieved === 1).length;
+  const totalCount = playerAchievements.length;
+  const completion = totalCount === 0
+    ? 0
+    : Math.round((earnedCount / totalCount) * 100);
+
+  const achievements: GameAchievement[] = playerAchievements.map((a) => {
+    const schema = schemaMap.get(a.apiname);
+    return {
+      apiname: a.apiname,
+      name: schema?.displayName ?? a.apiname,
+      description: schema?.description ?? "",
+      icon: schema?.icon ?? "",
+      icongray: schema?.icongray ?? "",
+      achieved: a.achieved === 1,
+      unlocktime: a.unlocktime,
+      globalPercent: globalPctMap.get(a.apiname) ?? 0,
+      hidden: false,
+    };
+  });
+
+  return {
+    gameName: owned?.name ?? gameName,
+    gameImage: getGameHeaderImage(appId),
+    appId,
+    hours: owned ? Math.round(owned.playtime_forever / 60) : 0,
+    totalAchievements: totalCount,
+    earnedAchievements: earnedCount,
+    completion: Number.isNaN(completion) ? 0 : completion,
+    achievements,
+    error: null,
+  };
+}

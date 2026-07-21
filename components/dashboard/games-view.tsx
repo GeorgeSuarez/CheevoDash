@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import Image from "next/image";
+import Link from "next/link";
 import { Search, Clock, Trophy, Bookmark, Gamepad2 } from "lucide-react";
 import {
   Select,
@@ -71,7 +72,10 @@ function CompletionRing({
 
 function GameCard({ game }: { game: Game }) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border/50 bg-card transition-colors hover:border-border">
+    <Link
+      href={`/games/${game.appId}`}
+      className="group relative block overflow-hidden rounded-xl border border-border/50 bg-card transition-colors hover:border-border"
+    >
       <div className="relative aspect-[460/215] w-full overflow-hidden">
         <Image
           src={game.image}
@@ -128,7 +132,7 @@ function GameCard({ game }: { game: Game }) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 

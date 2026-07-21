@@ -1,0 +1,196 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft, Clock, Trophy, Lock, Unlock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { GameAchievementsData } from "@/lib/dashboard";
+
+function timeAgo(unix: number): string {
+  if (unix === 0) return "";
+  const diff = Date.now() - unix * 1000;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+function AchievementRow({
+  achievement,
+}: {
+  achievement: GameAchievementsData["achievements"][number];
+}) {
+  return (
+    <div
+      className={
+        "flex items-center gap-4 border-t border-border/30 py-4 transition-colors hover:bg-white/[0.02]" +
+        (achievement.achieved ? "" : " opacity-60")
+      }
+    >
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+        {achievement.achieved && achievement.icon ? (
+          <Image
+            src={achievement.icon}
+            alt={achievement.name}
+            fill
+            className="object-cover"
+            sizes="48px"
+          />
+        ) : achievement.icongray ? (
+          <Image
+            src={achievement.icongray}
+            alt={achievement.name}
+            fill
+            className="object-cover grayscale"
+            sizes="48px"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Trophy className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-semibold text-foreground">
+          {achievement.name}
+        </p>
+        {achievement.description && (
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+            {achievement.description}
+          </p>
+        )}
+        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            {achievement.achieved ? (
+              <Unlock className="h-3 w-3 text-green-400" />
+            ) : (
+              <Lock className="h-3 w-3 text-muted-foreground" />
+            )}
+            {achievement.achieved ? "Unlocked" : "Locked"}
+          </span>
+          {achievement.achieved && achievement.unlocktime > 0 && (
+            <span>{timeAgo(achievement.unlocktime)}</span>
+          )}
+          <span>
+            {achievement.globalPercent.toFixed(1)}% of players
+          </span>
+        </div>
+      </div>
+      {achievement.achieved && (
+        <div className="shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+            <Trophy className="h-4 w-4 text-green-400" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AchievementList({
+  data,
+}: {
+  data: GameAchievementsData;
+}) {
+  const { achievements } = data;
+
+  const earned = achievements.filter((a) => a.achieved);
+  const locked = achievements.filter((a) => !a.achieved);
+
+  return (
+    <div className="flex min-h-screen w-full">
+      <main className="flex-1 overflow-auto bg-background p-4 lg:p-8">
+        <div className="mx-auto max-w-4xl">
+          {/* Back link */}
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to dashboard
+          </Link>
+
+          {/* Game header */}
+          <div className="relative mb-6 overflow-hidden rounded-xl">
+            <div className="relative aspect-[460/215] w-full">
+              <Image
+                src={data.gameImage}
+                alt={data.gameName}
+                fill
+                className="object-cover"
+                priority
+                sizes="(max-width: 1024px) 100vw, 896px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-6">
+              <h1 className="text-2xl font-bold text-white drop-shadow-lg">
+                {data.gameName}
+              </h1>
+              <div className="mt-2 flex items-center gap-4 text-sm text-white/80">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {data.hours}h played
+                </span>
+                <span className="flex items-center gap-1">
+                  <Trophy className="h-4 w-4" />
+                  {data.earnedAchievements}/{data.totalAchievements}
+                </span>
+                <span>{data.completion}%</span>
+              </div>
+            </div>
+          </div>
+
+          {achievements.length === 0 ? (
+            <Card className="border-border/50 bg-card">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No achievement data available for this game.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-border/50 bg-card">
+              <CardHeader className="pb-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold">
+                    {achievements.length} Achievement{achievements.length !== 1 ? "s" : ""}
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    {earned.length} unlocked &middot; {locked.length} locked
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {earned.length > 0 && (
+                  <>
+                    <h3 className="mb-2 mt-4 text-sm font-medium text-green-400">
+                      Unlocked ({earned.length})
+                    </h3>
+                    {earned.map((ach) => (
+                      <AchievementRow key={ach.apiname} achievement={ach} />
+                    ))}
+                  </>
+                )}
+                {locked.length > 0 && (
+                  <>
+                    <h3 className="mb-2 mt-6 text-sm font-medium text-muted-foreground">
+                      Locked ({locked.length})
+                    </h3>
+                    {locked.map((ach) => (
+                      <AchievementRow key={ach.apiname} achievement={ach} />
+                    ))}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -123,7 +123,7 @@ export function getGameHeaderImage(appId: number): string {
 }
 
 export const getSchemaForGame = cache(
-  async (appId: number): Promise<Map<string, { displayName: string; description: string; icon: string }>> => {
+  async (appId: number): Promise<Map<string, { displayName: string; description: string; icon: string; icongray: string }>> => {
     const url = new URL(
       `${STEAM_API_BASE}/ISteamUserStats/GetSchemaForGame/v2/`,
     );
@@ -133,12 +133,13 @@ export const getSchemaForGame = cache(
 
     const { data } = await steamFetch<SteamSchemaResponse>(url.toString(), 3600);
     const achievements = data?.game?.availableGameStats?.achievements ?? [];
-    const map = new Map<string, { displayName: string; description: string; icon: string }>();
+    const map = new Map<string, { displayName: string; description: string; icon: string; icongray: string }>();
     for (const ach of achievements) {
       map.set(ach.name, {
         displayName: ach.displayName,
         description: ach.description,
         icon: ach.icon,
+        icongray: ach.icongray,
       });
     }
     return map;

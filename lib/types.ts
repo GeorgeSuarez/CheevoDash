@@ -72,6 +72,18 @@ export interface RecentAchievement {
   unlocktime: number;
 }
 
+export interface GameAchievement {
+  apiname: string;
+  name: string;
+  description: string;
+  icon: string;
+  icongray: string;
+  achieved: boolean;
+  unlocktime: number;
+  globalPercent: number;
+  hidden: boolean;
+}
+
 export interface DashboardData {
   stats: Stats;
   achievementSeries: AchievementDataPoint[];

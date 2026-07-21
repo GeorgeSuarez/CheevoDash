@@ -13,13 +13,17 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import type { Game } from "@/lib/types";
 
 const TOP_GAMES_LIMIT = 4;
 
 function GameHeader({ game }: { game: Game }) {
   return (
-    <div className="flex items-center gap-4">
+    <Link
+      href={`/games/${game.appId}`}
+      className="flex items-center gap-4 transition-opacity hover:opacity-80"
+    >
       <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg">
         <Image
           src={game.image}
@@ -35,7 +39,7 @@ function GameHeader({ game }: { game: Game }) {
           <Clock className="h-3 w-3" /> {game.hours} hrs
         </p>
       </div>
-    </div>
+    </Link>
   );
 }
 
