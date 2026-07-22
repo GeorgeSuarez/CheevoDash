@@ -104,6 +104,24 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
             </div>
           </div>
 
+          {/* Notification banner */}
+          <div className="mb-6 flex items-start gap-4 rounded-xl border border-primary/20 bg-primary/10 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20">
+              <Lightbulb className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                {data.stats.achievementsEarnedDelta != null &&
+                data.stats.achievementsEarnedDelta > 0
+                  ? `Great job! You've earned ${data.stats.achievementsEarnedDelta} more achievements this month.`
+                  : `You've earned ${data.stats.achievementsEarned.toLocaleString()} achievements total.`}
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Keep playing to beat your community average!
+              </p>
+            </div>
+          </div>
+
           {/* Dashboard content */}
           {data.error ? (
             <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-destructive/10 p-8 text-center">
@@ -160,24 +178,6 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                   games={data.games}
                   onTrackToggle={() => refetch(filter, range)}
                 />
-              </div>
-
-              {/* Notification banner */}
-              <div className="mt-6 flex items-start gap-4 rounded-xl border border-primary/20 bg-primary/10 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20">
-                  <Lightbulb className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {data.stats.achievementsEarnedDelta != null &&
-                    data.stats.achievementsEarnedDelta > 0
-                      ? `Great job! You've earned ${data.stats.achievementsEarnedDelta} more achievements this month.`
-                      : `You've earned ${data.stats.achievementsEarned.toLocaleString()} achievements total.`}
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    Keep playing to beat your community average!
-                  </p>
-                </div>
               </div>
             </div>
             </div>
