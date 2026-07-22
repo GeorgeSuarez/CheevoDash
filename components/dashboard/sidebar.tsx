@@ -27,7 +27,7 @@ const navItems = [
     label: "Comparisons",
     href: "/comparisons",
   },
-  { icon: Users, label: "Friends", href: "#", disabled: true, badge: "Soon" },
+  { icon: Users, label: "Friends", href: "/friends" },
   {
     icon: BarChart3,
     label: "Insights",

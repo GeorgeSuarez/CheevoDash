@@ -625,6 +625,36 @@ export async function getFriendsComparison(
 export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
 export const DASHBOARD_RANGES: DateRange[] = ["7d", "30d", "90d", "1y"];
 
+// --- Friends list ---
+
+export interface FriendSummary {
+  steamId: string;
+  name: string;
+  avatar: string;
+  avatarFull: string;
+  profileUrl: string;
+}
+
+export async function getFriendsData(
+  steamId: string,
+): Promise<{ friends: FriendSummary[]; error: DashboardError }> {
+  const friendIds = await getFriendList(steamId);
+  if (friendIds.length === 0) {
+    return { friends: [], error: null };
+  }
+
+  const summaries = await getPlayerSummaries(friendIds);
+  const friends: FriendSummary[] = summaries.map((s) => ({
+    steamId: s.steamid,
+    name: s.personaname,
+    avatar: s.avatar,
+    avatarFull: s.avatarfull,
+    profileUrl: s.profileurl,
+  }));
+
+  return { friends, error: null };
+}
+
 // --- Per-game achievement list ---
 
 export interface GameAchievementsData {

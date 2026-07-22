@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Clock, Trophy, Bookmark, Gamepad2 } from "lucide-react";
+import { Search, Clock, Trophy, Bookmark, BookmarkCheck, Gamepad2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -70,69 +71,113 @@ function CompletionRing({
   );
 }
 
-function GameCard({ game }: { game: Game }) {
+function GameCard({ game: initialGame }: { game: Game }) {
+  const [tracked, setTracked] = useState(initialGame.tracked);
+  const [isPending, startTransition] = useTransition();
+
+  function toggleTrack(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextTracked = !tracked;
+    setTracked(nextTracked);
+    startTransition(async () => {
+      try {
+        if (nextTracked) {
+          await fetch("/api/tracked-games", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ appId: initialGame.appId }),
+          });
+        } else {
+          await fetch(`/api/tracked-games?appId=${initialGame.appId}`, {
+            method: "DELETE",
+          });
+        }
+      } catch {
+        setTracked(!nextTracked);
+      }
+    });
+  }
+
   return (
-    <Link
-      href={`/games/${game.appId}`}
-      className="group relative block overflow-hidden rounded-xl border border-border/50 bg-card transition-colors hover:border-border"
-    >
-      <div className="relative aspect-[460/215] w-full overflow-hidden">
-        <Image
-          src={game.image}
-          alt={game.name}
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
-        {game.tracked && (
-          <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary/90">
-            <Bookmark className="h-3 w-3 fill-primary-foreground text-primary-foreground" />
-          </div>
-        )}
+    <div className="group relative block overflow-hidden rounded-xl border border-border/50 bg-card transition-colors hover:border-border">
+      <Link
+        href={`/games/${initialGame.appId}`}
+        className="block"
+      >
+        <div className="relative aspect-[460/215] w-full overflow-hidden">
+          <Image
+            src={initialGame.image}
+            alt={initialGame.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
+        </div>
+      </Link>
+      <div className="absolute top-2 right-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTrack}
+          disabled={isPending}
+          aria-label={tracked ? `Untrack ${initialGame.name}` : `Track ${initialGame.name}`}
+          aria-pressed={tracked}
+          className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-sm hover:bg-background/80"
+        >
+          {tracked ? (
+            <BookmarkCheck className="h-4 w-4 fill-primary text-primary" />
+          ) : (
+            <Bookmark className="h-4 w-4 text-foreground" />
+          )}
+        </Button>
       </div>
-      <div className="p-4">
+      <Link
+        href={`/games/${initialGame.appId}`}
+        className="block p-4"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-foreground">
-              {game.name}
+              {initialGame.name}
             </h3>
             <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {game.hours}h
+                {initialGame.hours}h
               </span>
-              {game.achievements.total > 0 && (
+              {initialGame.achievements.total > 0 && (
                 <span className="flex items-center gap-1">
                   <Trophy className="h-3 w-3" />
-                  {game.achievements.earned}/{game.achievements.total}
+                  {initialGame.achievements.earned}/{initialGame.achievements.total}
                 </span>
               )}
             </div>
           </div>
-          {game.achievements.total > 0 && (
-            <CompletionRing value={game.completion} />
+          {initialGame.achievements.total > 0 && (
+            <CompletionRing value={initialGame.completion} />
           )}
         </div>
-        {game.achievements.total > 0 && (
+        {initialGame.achievements.total > 0 && (
           <div className="mt-3">
             <div
               className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
               role="progressbar"
-              aria-valuenow={game.completion}
+              aria-valuenow={initialGame.completion}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label={`${game.completion}% completion`}
+              aria-label={`${initialGame.completion}% completion`}
             >
               <div
                 className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-                style={{ width: `${game.completion}%` }}
+                style={{ width: `${initialGame.completion}%` }}
               />
             </div>
           </div>
         )}
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
