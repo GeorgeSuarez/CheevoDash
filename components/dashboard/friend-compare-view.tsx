@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, EyeOff } from "lucide-react";
+import { ArrowLeft, AlertTriangle, EyeOff, Trophy } from "lucide-react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { DashboardData } from "@/lib/types";
 import type { FriendSummary } from "@/lib/dashboard";
 
-function StatCard({
+function CompareRow({
   label,
   yourValue,
   friendValue,
@@ -26,34 +26,26 @@ function StatCard({
   const tie = yourNum === friendNum;
 
   return (
-    <div className="border-t border-border/30 py-3 first:border-t-0">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <tr className="border-b border-border/20 last:border-b-0">
+      <td className="py-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
-      </p>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {!tie && (
-            <span className={youWin ? "text-green-400" : "text-muted-foreground/50"}>
-              {youWin ? "▲" : "▼"}
-            </span>
-          )}
-          <span className={youWin ? "font-semibold text-foreground" : "text-muted-foreground/70"}>
-            {format === "percent" ? `${yourValue}%` : yourValue}
+      </td>
+      <td className={`py-3 text-right ${youWin ? "font-semibold text-foreground" : "text-muted-foreground/60"}`}>
+        {format === "percent" ? `${yourValue}%` : yourValue}
+      </td>
+      <td className="w-8 px-2 text-center text-[10px] text-muted-foreground">vs</td>
+      <td className={`py-3 text-left ${!tie && !youWin ? "font-semibold text-foreground" : "text-muted-foreground/60"}`}>
+        {format === "percent" ? `${friendValue}%` : friendValue}
+      </td>
+      <td className="py-3 pl-4">
+        {!tie && (
+          <span className={`flex items-center gap-1 text-xs font-medium ${youWin ? "text-green-400" : "text-orange-400"}`}>
+            <Trophy className="h-3 w-3" />
+            {youWin ? "You" : "Them"}
           </span>
-        </div>
-        <span className="text-[10px] text-muted-foreground">vs</span>
-        <div className="flex items-center gap-2">
-          <span className={!youWin && !tie ? "font-semibold text-foreground" : "text-muted-foreground/70"}>
-            {format === "percent" ? `${friendValue}%` : friendValue}
-          </span>
-          {!tie && (
-            <span className={!youWin ? "text-green-400" : "text-muted-foreground/50"}>
-              {!youWin ? "▲" : "▼"}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -114,7 +106,7 @@ export function FriendCompareView({
     <div className="flex min-h-screen w-full">
       <Sidebar activeHref="/friends" />
       <main className="flex-1 overflow-auto bg-background p-4 lg:p-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-4xl">
           {/* Mobile top bar */}
           <div className="-mx-4 mb-4 flex items-center gap-3 lg:hidden">
             <MobileSidebar activeHref="/friends" />
@@ -130,7 +122,7 @@ export function FriendCompareView({
             Back to friends
           </Link>
 
-          {/* Compare header */}
+          {/* VS header */}
           <div className="mb-6 flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <Avatar className="h-16 w-16 border-2 border-primary">
@@ -155,52 +147,32 @@ export function FriendCompareView({
             </div>
           </div>
 
-          {/* Stats comparison */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="border-border/50 bg-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">
-                  <span className="text-primary">{yourData.user?.personaName ?? "You"}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <StatCard label="Achievements Earned" yourValue={yourStats.achievementsEarned} friendValue={friendStats.achievementsEarned} />
-                <StatCard label="Avg Completion" yourValue={yourStats.avgCompletion} friendValue={friendStats.avgCompletion} format="percent" />
-                <StatCard label="Games Owned" yourValue={yourStats.gamesOwned} friendValue={friendStats.gamesOwned} />
-                <StatCard label="Perfect Games" yourValue={yourStats.perfectGames} friendValue={friendStats.perfectGames} />
-                <StatCard label="Games Tracked" yourValue={yourStats.gamesTracked} friendValue={friendStats.gamesTracked} />
-              </CardContent>
-            </Card>
-
-            {friendData.error ? (
-              <Card className="border-border/50 bg-card">
-                <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                  <EyeOff className="h-8 w-8 text-muted-foreground" />
-                  <p className="font-medium text-foreground">
-                    {friendName}&apos;s data unavailable
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Profile or game details may be private.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-border/50 bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold">
-                    <span className="text-muted-foreground">{friendName}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <StatCard label="Achievements Earned" yourValue={friendStats.achievementsEarned} friendValue={yourStats.achievementsEarned} />
-                  <StatCard label="Avg Completion" yourValue={friendStats.avgCompletion} friendValue={yourStats.avgCompletion} format="percent" />
-                  <StatCard label="Games Owned" yourValue={friendStats.gamesOwned} friendValue={yourStats.gamesOwned} />
-                  <StatCard label="Perfect Games" yourValue={friendStats.perfectGames} friendValue={yourStats.perfectGames} />
-                  <StatCard label="Games Tracked" yourValue={friendStats.gamesTracked} friendValue={yourStats.gamesTracked} />
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          {/* Unified comparison chart */}
+          <Card className="border-border/50 bg-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Stats Comparison</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/30 text-xs text-muted-foreground">
+                    <th className="pb-2 text-left font-medium">Stat</th>
+                    <th className="pb-2 text-right font-medium">{yourData.user?.personaName ?? "You"}</th>
+                    <th className="w-8 px-2" />
+                    <th className="pb-2 text-left font-medium">{friendName}</th>
+                    <th className="pb-2 pl-4 text-left font-medium">Leader</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <CompareRow label="Achievements Earned" yourValue={yourStats.achievementsEarned} friendValue={friendStats.achievementsEarned} />
+                  <CompareRow label="Avg Completion" yourValue={yourStats.avgCompletion} friendValue={friendStats.avgCompletion} format="percent" />
+                  <CompareRow label="Games Owned" yourValue={yourStats.gamesOwned} friendValue={friendStats.gamesOwned} />
+                  <CompareRow label="Perfect Games" yourValue={yourStats.perfectGames} friendValue={friendStats.perfectGames} />
+                  <CompareRow label="Games Tracked" yourValue={yourStats.gamesTracked} friendValue={friendStats.gamesTracked} />
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
