@@ -70,6 +70,7 @@ export interface RecentAchievement {
   description?: string;
   icon?: string;
   unlocktime: number;
+  globalPercent?: number;
 }
 
 export interface GameAchievement {
@@ -91,6 +92,7 @@ export interface DashboardData {
   friends: Friend[];
   games: Game[];
   recentAchievements: RecentAchievement[];
+  rarestAchievements: RecentAchievement[];
   error: DashboardError;
   user?: {
     personaName: string;

@@ -115,7 +115,7 @@ interface GameData {
   achievements: { earned: number; total: number };
   unlocktimes: number[];
   communityAvg: number;
-  earnedEntries: { apiname: string; unlocktime: number }[];
+  earnedEntries: { apiname: string; unlocktime: number; globalPercent: number }[];
 }
 
 async function fetchGameData(
@@ -133,9 +133,18 @@ async function fetchGameData(
     .filter((a) => a.achieved === 1 && a.unlocktime > 0)
     .map((a) => a.unlocktime);
 
+  const globalPctMap = new Map<string, number>();
+  for (const g of globalPercentages) {
+    globalPctMap.set(g.name, Number(g.percent));
+  }
+
   const earnedEntries = playerAchievements
     .filter((a) => a.achieved === 1 && a.unlocktime > 0)
-    .map((a) => ({ apiname: a.apiname, unlocktime: a.unlocktime }));
+    .map((a) => ({
+      apiname: a.apiname,
+      unlocktime: a.unlocktime,
+      globalPercent: globalPctMap.get(a.apiname) ?? 0,
+    }));
 
   return {
     achievements: { earned, total },
@@ -269,16 +278,12 @@ export async function snapshotUser(steamId: string): Promise<void> {
 
 // --- Recent achievements ---
 
-const RECENT_ACHIEVEMENTS_LIMIT = 5;
+const ACHIEVEMENTS_LIMIT = 5;
 
-async function computeRecentAchievements(
-  entries: { appId: number; gameName: string; apiname: string; unlocktime: number }[],
+async function enrichWithSchemas(
+  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
 ): Promise<RecentAchievement[]> {
-  const top = [...entries]
-    .sort((a, b) => b.unlocktime - a.unlocktime)
-    .slice(0, RECENT_ACHIEVEMENTS_LIMIT);
-
-  const uniqueAppIds = [...new Set(top.map((e) => e.appId))];
+  const uniqueAppIds = [...new Set(entries.map((e) => e.appId))];
   const schemaMaps = await Promise.all(
     uniqueAppIds.map((appId) => getSchemaForGame(appId)),
   );
@@ -287,7 +292,7 @@ async function computeRecentAchievements(
     schemaByAppId.set(appId, schemaMaps[i]);
   });
 
-  return top.map((entry) => {
+  return entries.map((entry) => {
     const schema = schemaByAppId.get(entry.appId)?.get(entry.apiname);
     return {
       appId: entry.appId,
@@ -297,8 +302,28 @@ async function computeRecentAchievements(
       description: schema?.description,
       icon: schema?.icon,
       unlocktime: entry.unlocktime,
+      globalPercent: entry.globalPercent,
     };
   });
+}
+
+async function computeRecentAchievements(
+  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
+): Promise<RecentAchievement[]> {
+  const top = [...entries]
+    .sort((a, b) => b.unlocktime - a.unlocktime)
+    .slice(0, ACHIEVEMENTS_LIMIT);
+  return enrichWithSchemas(top);
+}
+
+async function computeRarestAchievements(
+  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
+): Promise<RecentAchievement[]> {
+  const top = [...entries]
+    .filter((e) => e.globalPercent != null && e.globalPercent > 0)
+    .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))
+    .slice(0, ACHIEVEMENTS_LIMIT);
+  return enrichWithSchemas(top);
 }
 
 // --- Main entry point ---
@@ -333,6 +358,7 @@ export async function getDashboardData({
       friends: [],
       games: [],
       recentAchievements: [],
+      rarestAchievements: [],
       error: { type: result.reason, status: result.status ?? undefined },
     };
   }
@@ -356,6 +382,7 @@ export async function getDashboardData({
       friends: [],
       games: [],
       recentAchievements: [],
+      rarestAchievements: [],
       error: null,
     };
   }
@@ -445,19 +472,24 @@ export async function getDashboardData({
   const games = [...filtered].sort((a, b) => b.hours - a.hours);
   const topGameWithAch = games.find((g) => g.achievements.total > 0);
 
-  // Collect all earned achievement entries for recent achievements
+  // Collect all earned achievement entries for recent and rarest achievements
   const allEarnedEntries = detailedResults.flatMap((r) =>
     r.earnedEntries.map((e) => ({
       appId: r.game.appId,
       gameName: r.game.name,
       apiname: e.apiname,
       unlocktime: e.unlocktime,
+      globalPercent: e.globalPercent,
     })),
   );
   const recentAchievements =
     allEarnedEntries.length === 0
       ? []
       : await computeRecentAchievements(allEarnedEntries);
+  const rarestAchievements =
+    allEarnedEntries.length === 0
+      ? []
+      : await computeRarestAchievements(allEarnedEntries);
 
   // Run friends, snapshot, and user info in parallel (all independent)
   const [friends, snapshot, user] = await Promise.all([
@@ -474,7 +506,7 @@ export async function getDashboardData({
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
-  return { stats, achievementSeries, comparison, friends, games, recentAchievements, error: null, user };
+  return { stats, achievementSeries, comparison, friends, games, recentAchievements, rarestAchievements, error: null, user };
 }
 
 // --- Lightweight games-only entry point ---

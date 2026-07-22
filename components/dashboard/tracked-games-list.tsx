@@ -45,38 +45,40 @@ export function TrackedGamesList({ games }: { games: Game[] }) {
               <Link
                 key={game.id}
                 href={`/games/${game.appId}`}
-                className="flex items-center gap-4 py-3 transition-colors hover:bg-white/[0.02]"
+                className="block py-3 transition-colors hover:bg-white/[0.02]"
               >
-                <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg">
-                  <Image
-                    src={game.image}
-                    alt={game.name}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-foreground">
-                    {game.name}
-                  </p>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {game.hours}h
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Trophy className="h-3 w-3" />
-                      {game.achievements.earned}/{game.achievements.total}
-                    </span>
+                <div className="flex items-center gap-4 px-4">
+                  <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg">
+                    <Image
+                      src={game.image}
+                      alt={game.name}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-foreground">
+                      {game.name}
+                    </p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {game.hours}h
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Trophy className="h-3 w-3" />
+                        {game.achievements.earned}/{game.achievements.total}
+                      </span>
+                      <span className="ml-auto font-semibold text-foreground">
+                        {game.completion}%
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-semibold text-foreground">
-                    {game.completion}%
-                  </p>
+                <div className="mt-2 px-4">
                   <div
-                    className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-muted"
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
                     role="progressbar"
                     aria-valuenow={game.completion}
                     aria-valuemin={0}

@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentAchievements } from "@/components/dashboard/recent-achievements";
+import { RarestAchievements } from "@/components/dashboard/rarest-achievements";
 import { TrackedGamesList } from "@/components/dashboard/tracked-games-list";
 import { TopGames } from "@/components/dashboard/top-games";
 import {
@@ -148,8 +149,9 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               </div>
 
               {/* Recent achievements */}
-              <div className="mt-6">
+              <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <RecentAchievements achievements={data.recentAchievements} />
+                <RarestAchievements achievements={data.rarestAchievements} />
               </div>
 
               {/* Top games */}
