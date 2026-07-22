@@ -637,22 +637,39 @@ export interface FriendSummary {
 
 export async function getFriendsData(
   steamId: string,
-): Promise<{ friends: FriendSummary[]; error: DashboardError }> {
+): Promise<{ friends: FriendSummary[]; error: DashboardError; hiddenCount: number }> {
   const friendIds = await getFriendList(steamId);
   if (friendIds.length === 0) {
-    return { friends: [], error: null };
+    return { friends: [], error: null, hiddenCount: 0 };
   }
 
   const summaries = await getPlayerSummaries(friendIds);
-  const friends: FriendSummary[] = summaries.map((s) => ({
-    steamId: s.steamid,
-    name: s.personaname,
-    avatar: s.avatar,
-    avatarFull: s.avatarfull,
-    profileUrl: s.profileurl,
-  }));
 
-  return { friends, error: null };
+  // Check each friend's profile accessibility via getOwnedGames
+  const results = await mapWithConcurrency(friendIds, CONCURRENCY, async (friendId) => {
+    const result = await getOwnedGames(friendId);
+    return { friendId, accessible: result.ok };
+  });
+
+  const accessibleSet = new Set(
+    results.filter((r) => r.accessible).map((r) => r.friendId),
+  );
+
+  const friends: FriendSummary[] = summaries
+    .filter((s) => accessibleSet.has(s.steamid))
+    .map((s) => ({
+      steamId: s.steamid,
+      name: s.personaname,
+      avatar: s.avatar,
+      avatarFull: s.avatarfull,
+      profileUrl: s.profileurl,
+    }));
+
+  return {
+    friends,
+    error: null,
+    hiddenCount: summaries.length - friends.length,
+  };
 }
 
 // --- Per-game achievement list ---

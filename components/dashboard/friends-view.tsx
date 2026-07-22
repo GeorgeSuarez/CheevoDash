@@ -12,9 +12,11 @@ import type { DashboardError } from "@/lib/types";
 export function FriendsView({
   friends,
   error,
+  hiddenCount = 0,
 }: {
   friends: FriendSummary[];
   error: DashboardError;
+  hiddenCount?: number;
 }) {
   return (
     <div className="flex min-h-screen w-full">
@@ -33,7 +35,12 @@ export function FriendsView({
               Friends
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {friends.length} friend{friends.length !== 1 ? "s" : ""} on Steam
+              {friends.length} friend{friends.length !== 1 ? "s" : ""} with public stats
+              {hiddenCount > 0 && (
+                <span className="ml-1.5 text-muted-foreground/60">
+                  &middot; {hiddenCount} hidden (private profile)
+                </span>
+              )}
             </p>
           </div>
 
@@ -53,9 +60,13 @@ export function FriendsView({
                 <Users className="h-7 w-7 text-muted-foreground" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">No friends found</p>
+                <p className="font-semibold text-foreground">
+                  {hiddenCount > 0 ? "No friends with public stats" : "No friends found"}
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Add friends on Steam to see them here.
+                  {hiddenCount > 0
+                    ? `All ${hiddenCount} friend${hiddenCount !== 1 ? "s" : ""} have private profiles.`
+                    : "Add friends on Steam to see them here."}
                 </p>
               </div>
             </div>

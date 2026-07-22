@@ -11,6 +11,6 @@ export default async function FriendsPage() {
     redirect("/login");
   }
 
-  const { friends, error } = await getFriendsData(session.steamId);
-  return <FriendsView friends={friends} error={error} />;
+  const { friends, error, hiddenCount } = await getFriendsData(session.steamId);
+  return <FriendsView friends={friends} error={error} hiddenCount={hiddenCount} />;
 }
