@@ -10,8 +10,8 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
       <div
-        className={`h-full rounded-full ${color} transition-all`}
-        style={{ width: `${pct}%` }}
+        className="h-full rounded-full transition-all"
+        style={{ width: `${pct}%`, backgroundColor: color }}
       />
     </div>
   );
@@ -108,7 +108,7 @@ function RaritySection({ data }: { data: DashboardData }) {
           {tiers.map((tier) => (
             <div key={tier.tier}>
               <div className="mb-1 flex items-center justify-between text-sm">
-                <span className={tier.color === "text-muted-foreground" ? "text-muted-foreground" : `font-medium ${tier.color}`}>
+                <span style={{ color: tier.color }}>
                   {tier.tier}
                 </span>
                 <span className="text-foreground">
@@ -118,7 +118,7 @@ function RaritySection({ data }: { data: DashboardData }) {
                   </span>
                 </span>
               </div>
-              <MiniBar value={tier.count} max={maxCount} color={tier.color.replace("text-", "bg-")} />
+              <MiniBar value={tier.count} max={maxCount} color={tier.color} />
             </div>
           ))}
         </div>
