@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
+import { InsightsCards } from "@/components/dashboard/insights-cards";
 const AchievementChart = dynamic(
   () => import("@/components/dashboard/achievement-chart").then((m) => m.AchievementChart),
   { ssr: false },
@@ -121,6 +122,8 @@ export function InsightsView({ initialData }: { initialData: DashboardData }) {
                     range={range}
                   />
                 </div>
+
+                <InsightsCards data={data} />
               </div>
             </div>
           )}

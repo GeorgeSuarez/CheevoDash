@@ -19,6 +19,7 @@ import type {
   Game,
   GameAchievement,
   GameFilter,
+  RarityTier,
   RecentAchievement,
   Stats,
   SteamGlobalAchievement,
@@ -326,6 +327,32 @@ async function computeRarestAchievements(
   return enrichWithSchemas(top);
 }
 
+// --- Rarity distribution ---
+
+const RARITY_TIERS = [
+  { tier: "Common", min: 50, max: 100, color: "text-muted-foreground" },
+  { tier: "Uncommon", min: 25, max: 50, color: "text-green-400" },
+  { tier: "Rare", min: 10, max: 25, color: "text-blue-400" },
+  { tier: "Very Rare", min: 5, max: 10, color: "text-purple-400" },
+  { tier: "Ultra Rare", min: 0, max: 5, color: "text-amber-400" },
+] as const;
+
+function computeRarityDistribution(
+  entries: { globalPercent?: number }[],
+): RarityTier[] {
+  const tiers = RARITY_TIERS.map((t) => ({ ...t, count: 0, color: t.color }));
+  for (const e of entries) {
+    const pct = e.globalPercent ?? 100;
+    for (const tier of tiers) {
+      if (pct >= tier.min && pct < tier.max) {
+        tier.count++;
+        break;
+      }
+    }
+  }
+  return tiers.map(({ tier, count, color }) => ({ tier, count, color }));
+}
+
 // --- Main entry point ---
 
 export async function getDashboardData({
@@ -359,6 +386,7 @@ export async function getDashboardData({
       games: [],
       recentAchievements: [],
       rarestAchievements: [],
+      rarityDistribution: [],
       error: { type: result.reason, status: result.status ?? undefined },
     };
   }
@@ -383,6 +411,7 @@ export async function getDashboardData({
       games: [],
       recentAchievements: [],
       rarestAchievements: [],
+      rarityDistribution: [],
       error: null,
     };
   }
@@ -491,6 +520,9 @@ export async function getDashboardData({
       ? []
       : await computeRarestAchievements(allEarnedEntries);
 
+  // Compute rarity distribution from all earned entries
+  const rarityDistribution = computeRarityDistribution(allEarnedEntries);
+
   // Run friends, snapshot, and user info in parallel (all independent)
   const [friends, snapshot, user] = await Promise.all([
     topGameWithAch
@@ -506,7 +538,7 @@ export async function getDashboardData({
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
-  return { stats, achievementSeries, comparison, friends, games, recentAchievements, rarestAchievements, error: null, user };
+  return { stats, achievementSeries, comparison, friends, games, recentAchievements, rarestAchievements, rarityDistribution, error: null, user };
 }
 
 // --- Lightweight games-only entry point ---

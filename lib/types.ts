@@ -85,6 +85,12 @@ export interface GameAchievement {
   hidden: boolean;
 }
 
+export interface RarityTier {
+  tier: string;
+  count: number;
+  color: string;
+}
+
 export interface DashboardData {
   stats: Stats;
   achievementSeries: AchievementDataPoint[];
@@ -93,6 +99,7 @@ export interface DashboardData {
   games: Game[];
   recentAchievements: RecentAchievement[];
   rarestAchievements: RecentAchievement[];
+  rarityDistribution: RarityTier[];
   error: DashboardError;
   user?: {
     personaName: string;
