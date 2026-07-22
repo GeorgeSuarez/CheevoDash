@@ -6,7 +6,6 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
-  GitCompare,
 } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,11 +28,6 @@ const navItems: NavItem[] = [
     icon: Trophy,
     label: "Achievements",
     href: "/achievements",
-  },
-  {
-    icon: GitCompare,
-    label: "Comparisons",
-    href: "/comparisons",
   },
   { icon: Users, label: "Friends", href: "/friends" },
   {
