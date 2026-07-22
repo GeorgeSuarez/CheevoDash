@@ -704,6 +704,107 @@ export async function getFriendsData(
   };
 }
 
+// --- Achievements overview ---
+
+export interface AchievementsOverviewData {
+  stats: Stats;
+  games: Game[];
+  recentAchievements: RecentAchievement[];
+  rarestAchievements: RecentAchievement[];
+  rarestPerGame: { appId: number; gameName: string; achievement: RecentAchievement }[];
+  error: DashboardError;
+  user?: { personaName: string; avatar: string };
+}
+
+export async function getAchievementsData(
+  steamId: string,
+): Promise<AchievementsOverviewData> {
+  const dashboardData = await getDashboardData({ steamId, filter: "all", range: "30d" });
+
+  if (dashboardData.error) {
+    return {
+      stats: dashboardData.stats,
+      games: dashboardData.games,
+      recentAchievements: [],
+      rarestAchievements: [],
+      rarestPerGame: [],
+      error: dashboardData.error,
+      user: dashboardData.user,
+    };
+  }
+
+  // Collect all earned entries from games (reuse the dashboard's game data)
+  // Need to re-fetch game data to get earnedEntries since they aren't stored in DashboardData
+  const sorted = [...dashboardData.games].sort((a, b) => b.hours - a.hours);
+  const detailedSlice = sorted.filter(
+    (g) => g.achievements.total > 0,
+  );
+
+  const detailedResults = await mapWithConcurrency(
+    detailedSlice,
+    CONCURRENCY,
+    async (game) => {
+      const data = await fetchGameData(steamId, game.appId);
+      return data.earnedEntries.map((e) => ({
+        appId: game.appId,
+        gameName: game.name,
+        apiname: e.apiname,
+        unlocktime: e.unlocktime,
+        globalPercent: e.globalPercent,
+      }));
+    },
+  );
+
+  const allEarnedEntries = detailedResults.flat();
+
+  const [recentAchievements, rarestAchievements] = await Promise.all([
+    allEarnedEntries.length === 0
+      ? Promise.resolve([] as RecentAchievement[])
+      : (async () => {
+          const top = [...allEarnedEntries]
+            .sort((a, b) => b.unlocktime - a.unlocktime)
+            .slice(0, 20);
+          return enrichWithSchemas(top);
+        })(),
+    allEarnedEntries.length === 0
+      ? Promise.resolve([] as RecentAchievement[])
+      : (async () => {
+          const top = [...allEarnedEntries]
+            .filter((e) => e.globalPercent != null && e.globalPercent > 0)
+            .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))
+            .slice(0, 10);
+          return enrichWithSchemas(top);
+        })(),
+  ]);
+
+  // Compute rarest per game
+  const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = [];
+  for (const game of detailedSlice) {
+    const gameEntries = allEarnedEntries.filter((e) => e.appId === game.appId);
+    const rarest = [...gameEntries]
+      .filter((e) => e.globalPercent != null && e.globalPercent > 0)
+      .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))[0];
+    if (rarest) {
+      const enriched = await enrichWithSchemas([rarest]);
+      rarestPerGame.push({
+        appId: game.appId,
+        gameName: game.name,
+        achievement: enriched[0],
+      });
+    }
+  }
+
+  return {
+    stats: dashboardData.stats,
+    games: dashboardData.games,
+    recentAchievements,
+    rarestAchievements,
+    rarestPerGame,
+    error: null,
+    user: dashboardData.user,
+  };
+}
+
 // --- Per-game achievement list ---
 
 export interface GameAchievementsData {

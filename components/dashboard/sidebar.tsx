@@ -18,9 +18,7 @@ const navItems = [
   {
     icon: Trophy,
     label: "Achievements",
-    href: "#",
-    disabled: true,
-    badge: "Soon",
+    href: "/achievements",
   },
   {
     icon: GitCompare,

@@ -53,15 +53,6 @@ export function RarestAchievements({
                 key={`${ach.appId}-${ach.name}-${i}`}
                 className="flex items-center gap-4 py-3"
               >
-                <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg">
-                  <Image
-                    src={ach.gameImage}
-                    alt={ach.gameName}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 96px, 96px"
-                  />
-                </div>
                 <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
                   {ach.icon ? (
                     <Image
