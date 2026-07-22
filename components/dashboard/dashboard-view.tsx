@@ -1,15 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
-const ComparisonChart = dynamic(
-  () => import("@/components/dashboard/comparison-chart").then((m) => m.ComparisonChart),
-  { ssr: false },
-);
-import { FriendsComparison } from "@/components/dashboard/friends-comparison";
 import { RecentAchievements } from "@/components/dashboard/recent-achievements";
 import { TrackedGamesList } from "@/components/dashboard/tracked-games-list";
 import { TopGames } from "@/components/dashboard/top-games";
@@ -147,19 +141,6 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
               )}
               <div className={isPending ? "pointer-events-none opacity-50" : "transition-opacity duration-200"}>
                 <StatsCards stats={data.stats} />
-
-              {/* Charts row */}
-              <div className="mt-6 grid grid-cols-12 gap-6">
-                <div className="col-span-12 lg:col-span-7">
-                  <ComparisonChart comparison={data.comparison} />
-                </div>
-                <div className="col-span-12 lg:col-span-5">
-                  <FriendsComparison
-                    initialFriends={data.friends}
-                    games={data.games}
-                  />
-                </div>
-              </div>
 
               {/* Tracked games */}
               <div className="mt-6">

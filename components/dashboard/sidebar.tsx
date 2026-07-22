@@ -25,9 +25,7 @@ const navItems = [
   {
     icon: GitCompare,
     label: "Comparisons",
-    href: "#",
-    disabled: true,
-    badge: "Soon",
+    href: "/comparisons",
   },
   { icon: Users, label: "Friends", href: "#", disabled: true, badge: "Soon" },
   {
