@@ -27,7 +27,6 @@ import type {
 export { reconstructSeries } from "./series";
 
 const CONCURRENCY = 5;
-const MAX_DETAILED_GAMES = 50;
 
 // --- Pure transforms (exported for testing) ---
 
@@ -365,10 +364,9 @@ export async function getDashboardData({
   const sorted = [...ownedGames].sort(
     (a, b) => b.playtime_forever - a.playtime_forever,
   );
-  const detailedCandidates = sorted.filter(
+  const detailedSlice = sorted.filter(
     (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
   );
-  const detailedSlice = detailedCandidates.slice(0, MAX_DETAILED_GAMES);
   const detailedIds = new Set(detailedSlice.map((g) => g.appid));
   const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
 
@@ -509,10 +507,9 @@ export async function getGamesData({
   const sorted = [...ownedGames].sort(
     (a, b) => b.playtime_forever - a.playtime_forever,
   );
-  const detailedCandidates = sorted.filter(
+  const detailedSlice = sorted.filter(
     (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
   );
-  const detailedSlice = detailedCandidates.slice(0, MAX_DETAILED_GAMES);
   const detailedIds = new Set(detailedSlice.map((g) => g.appid));
   const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
 
@@ -528,7 +525,7 @@ export async function getGamesData({
           owned.name,
           owned.playtime_forever,
           data,
-          false,
+          false, // placeholder, replaced below
         );
       },
     ),
