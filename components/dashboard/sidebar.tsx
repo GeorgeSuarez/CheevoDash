@@ -11,8 +11,18 @@ import {
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  active?: boolean;
+  disabled?: boolean;
+  badge?: string;
+}
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Overview", href: "/", active: true },
   { icon: Gamepad2, label: "Games", href: "/games" },
   {
@@ -34,9 +44,7 @@ const navItems = [
   {
     icon: Settings,
     label: "Settings",
-    href: "#",
-    disabled: true,
-    badge: "Soon",
+    href: "/settings",
   },
 ];
 

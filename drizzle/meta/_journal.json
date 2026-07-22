@@ -15,6 +15,13 @@
       "when": 1784157004990,
       "tag": "0001_dazzling_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784684363879,
+      "tag": "0002_stale_proemial_gods",
+      "breakpoints": true
     }
   ]
 }

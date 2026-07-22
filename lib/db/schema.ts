@@ -37,6 +37,20 @@ export const snapshots = sqliteTable("snapshots", {
   gamesOwned: integer("games_owned").notNull(),
 });
 
+export const userPreferences = sqliteTable("user_preferences", {
+  steamId: text("steam_id").primaryKey().references(() => users.steamId),
+  defaultFilter: text("default_filter", { enum: ["all", "owned", "tracked"] })
+    .notNull()
+    .default("all"),
+  defaultRange: text("default_range", { enum: ["7d", "30d", "90d", "1y"] })
+    .notNull()
+    .default("30d"),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date())
+    .$onUpdateFn(() => new Date()),
+});
+
 export const globalGameSnapshots = sqliteTable(
   "global_game_snapshots",
   {
