@@ -5,16 +5,13 @@ import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
-const AchievementChart = dynamic(
-  () => import("@/components/dashboard/achievement-chart").then((m) => m.AchievementChart),
-  { ssr: false },
-);
 const ComparisonChart = dynamic(
   () => import("@/components/dashboard/comparison-chart").then((m) => m.ComparisonChart),
   { ssr: false },
 );
 import { FriendsComparison } from "@/components/dashboard/friends-comparison";
 import { RecentAchievements } from "@/components/dashboard/recent-achievements";
+import { TrackedGamesList } from "@/components/dashboard/tracked-games-list";
 import { TopGames } from "@/components/dashboard/top-games";
 import {
   Select,
@@ -153,19 +150,20 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
 
               {/* Charts row */}
               <div className="mt-6 grid grid-cols-12 gap-6">
-                <AchievementChart
-                  series={data.achievementSeries}
-                  totalAchievements={data.games.reduce((sum, g) => sum + g.achievements.total, 0)}
-                  games={data.games}
-                  range={range}
-                />
-                <div className="col-span-12 grid grid-cols-1 gap-6 lg:col-span-5">
+                <div className="col-span-12 lg:col-span-7">
                   <ComparisonChart comparison={data.comparison} />
+                </div>
+                <div className="col-span-12 lg:col-span-5">
                   <FriendsComparison
                     initialFriends={data.friends}
                     games={data.games}
                   />
                 </div>
+              </div>
+
+              {/* Tracked games */}
+              <div className="mt-6">
+                <TrackedGamesList games={data.games} />
               </div>
 
               {/* Recent achievements */}

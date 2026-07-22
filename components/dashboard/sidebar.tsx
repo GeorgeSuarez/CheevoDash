@@ -33,9 +33,7 @@ const navItems = [
   {
     icon: BarChart3,
     label: "Insights",
-    href: "#",
-    disabled: true,
-    badge: "Soon",
+    href: "/insights",
   },
   {
     icon: Settings,
