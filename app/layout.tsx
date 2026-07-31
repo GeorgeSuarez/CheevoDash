@@ -8,7 +8,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  ),
   title: {
     default: "CheevoDash",
     template: "%s | CheevoDash",
@@ -16,11 +18,7 @@ export const metadata: Metadata = {
   description:
     "Track your achievements and compare your progress with other players.",
   applicationName: "CheevoDash",
-  icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
-  },
+  icons: {},
   openGraph: {
     title: "CheevoDash",
     description:
@@ -42,10 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} dark h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} dark h-full antialiased`}>
       <body className="min-h-full flex bg-background text-foreground">
         {children}
       </body>
