@@ -14,7 +14,6 @@ export default async function Home() {
   const initialData = await getDashboardData({
     steamId: session.steamId,
     filter: "all",
-    range: "30d",
   });
   return <DashboardView initialData={initialData} />;
 }

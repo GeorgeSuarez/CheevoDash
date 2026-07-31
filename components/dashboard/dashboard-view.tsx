@@ -15,20 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Lightbulb, AlertTriangle, EyeOff } from "lucide-react";
-import type { DashboardData, DateRange, GameFilter } from "@/lib/types";
+import { Lightbulb, AlertTriangle, EyeOff } from "lucide-react";
+import type { DashboardData, GameFilter } from "@/lib/types";
 
 export function DashboardView({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState<DashboardData>(initialData);
   const [filter, setFilter] = useState<GameFilter>("all");
-  const [range, setRange] = useState<DateRange>("30d");
   const [isPending, startTransition] = useTransition();
 
-  function refetch(nextFilter: GameFilter, nextRange: DateRange) {
+  function refetch(nextFilter: GameFilter) {
     startTransition(async () => {
       const params = new URLSearchParams({
         filter: nextFilter,
-        range: nextRange,
       });
       try {
         const res = await fetch(`/api/dashboard?${params.toString()}`);
@@ -44,13 +42,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
   function onFilterChange(value: GameFilter | null) {
     if (!value) return;
     setFilter(value);
-    refetch(value, range);
-  }
-
-  function onRangeChange(value: DateRange | null) {
-    if (!value) return;
-    setRange(value);
-    refetch(filter, value);
+    refetch(value);
   }
 
   return (
@@ -90,18 +82,6 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                   <SelectItem value="all">All Games</SelectItem>
                   <SelectItem value="owned">Owned Games</SelectItem>
                   <SelectItem value="tracked">Tracked Games</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={range} onValueChange={onRangeChange}>
-                <SelectTrigger className="h-9 w-36 border-border/50 bg-card text-xs">
-                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="30 Days" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">7 Days</SelectItem>
-                  <SelectItem value="30d">30 Days</SelectItem>
-                  <SelectItem value="90d">90 Days</SelectItem>
-                  <SelectItem value="1y">1 Year</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -193,7 +173,7 @@ export function DashboardView({ initialData }: { initialData: DashboardData }) {
                 <div className="mt-6">
                   <TopGames
                     games={data.games}
-                    onTrackToggle={() => refetch(filter, range)}
+                    onTrackToggle={() => refetch(filter)}
                   />
                 </div>
 

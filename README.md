@@ -6,9 +6,8 @@ A Steam-style achievement dashboard built with Next.js, React 19, Tailwind CSS v
 
 - **Steam sign-in** — Authenticate via Steam OpenID (no passwords)
 - **Achievement overview** — See total achievements earned, average completion, perfect games, and recent unlocks
-- **Completion chart** — Track your achievement progress over custom date ranges (7d, 30d, 90d, 1y)
-- **Community comparison** — Compare your average completion against the Steam community average
-- **Friends comparison** — See how your achievement progress stacks up against friends for any game
+- **Community comparison** — Compare your per-game completion against the Steam community average
+- **Friends comparison** — Compare your overall stats head-to-head against a friend
 - **Game browser** — Browse your Steam library with sortable stats and per-game achievement data
 - **Tracked games** — Pin specific games for quick filtering
 - **Nightly snapshots** — Automatic daily snapshots to compute deltas (trending up or down)
@@ -19,7 +18,6 @@ A Steam-style achievement dashboard built with Next.js, React 19, Tailwind CSS v
 |---|---|
 | Framework | [Next.js](https://nextjs.org) 16 (App Router) |
 | UI | [React](https://react.dev) 19, [Tailwind CSS](https://tailwindcss.com) v4, [shadcn/ui](https://ui.shadcn.com) |
-| Charts | [Recharts](https://recharts.org) |
 | Database | [Turso](https://turso.tech) / libSQL via [Drizzle ORM](https://orm.drizzle.team) |
 | Auth | Steam OpenID + signed JWTs ([jose](https://github.com/panva/jose)) |
 | Steam API | Typed, cached client with tiered revalidation |
@@ -92,18 +90,14 @@ app/
 ├── auth/steam/route.ts          # Initiate Steam OpenID flow
 ├── auth/steam/callback/route.ts # OpenID callback + user upsert
 ├── auth/logout/route.ts         # Clear session
-├── api/dashboard/route.ts       # JSON endpoint for filter/range changes
-├── api/friends-comparison/route.ts
+├── api/dashboard/route.ts       # JSON endpoint for filter changes
 ├── api/tracked-games/route.ts   # Toggle tracked games
 ├── api/cron/snapshot/route.ts   # Nightly snapshot writer
 ├── robots.ts / sitemap.ts       # SEO
 components/
 ├── dashboard/                   # Feature components (props-driven)
-│   ├── dashboard-view.tsx       # Client wrapper (filter/range state)
+│   ├── dashboard-view.tsx       # Client wrapper (filter state)
 │   ├── stats-cards.tsx
-│   ├── achievement-chart.tsx
-│   ├── comparison-chart.tsx
-│   ├── friends-comparison.tsx
 │   ├── top-games.tsx
 │   ├── sidebar.tsx
 │   └── mobile-sidebar.tsx

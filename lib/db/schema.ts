@@ -42,23 +42,8 @@ export const userPreferences = sqliteTable("user_preferences", {
   defaultFilter: text("default_filter", { enum: ["all", "owned", "tracked"] })
     .notNull()
     .default("all"),
-  defaultRange: text("default_range", { enum: ["7d", "30d", "90d", "1y"] })
-    .notNull()
-    .default("30d"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date())
     .$onUpdateFn(() => new Date()),
 });
-
-export const globalGameSnapshots = sqliteTable(
-  "global_game_snapshots",
-  {
-    appId: integer("app_id").notNull(),
-    date: text("date").notNull(),
-    avgCompletion: integer("avg_completion").notNull(),
-  },
-  (table) => ({
-    pk: primaryKey({ columns: [table.appId, table.date] }),
-  }),
-);

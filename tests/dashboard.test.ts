@@ -2,10 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   computeStats,
   filterGames,
-  reconstructSeries,
   meanGlobalPercent,
   DASHBOARD_FILTERS,
-  DASHBOARD_RANGES,
 } from "@/lib/dashboard";
 import type { Game, SteamGlobalAchievement } from "@/lib/types";
 import {
@@ -15,8 +13,6 @@ import {
   privateProfileFixture,
   emptyGamesFixture,
 } from "./fixtures/steam";
-
-const FIXED_TODAY = new Date("2026-07-07T12:00:00Z");
 
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
@@ -156,66 +152,11 @@ describe("meanGlobalPercent", () => {
   });
 });
 
-// --- reconstructSeries ---
-
-describe("reconstructSeries", () => {
-  const now = Date.now();
-  const unlocktimes = [
-    Math.floor((now - 40 * 86400000) / 1000),
-    Math.floor((now - 20 * 86400000) / 1000),
-    Math.floor((now - 5 * 86400000) / 1000),
-    Math.floor((now - 1 * 86400000) / 1000),
-  ];
-
-  it("produces the correct number of points per range", () => {
-    expect(reconstructSeries(unlocktimes, 10, 45, "7d", FIXED_TODAY)).toHaveLength(4);
-    expect(reconstructSeries(unlocktimes, 10, 45, "30d", FIXED_TODAY)).toHaveLength(11);
-    expect(reconstructSeries(unlocktimes, 10, 45, "90d", FIXED_TODAY)).toHaveLength(13);
-    expect(reconstructSeries(unlocktimes, 10, 45, "1y", FIXED_TODAY)).toHaveLength(12);
-  });
-
-  it("'you' values are non-decreasing", () => {
-    const series = reconstructSeries(unlocktimes, 10, 45, "30d", FIXED_TODAY);
-    for (let i = 1; i < series.length; i++) {
-      expect(series[i].you).toBeGreaterThanOrEqual(series[i - 1].you);
-    }
-  });
-
-  it("'community' is a flat line at communityAvg", () => {
-    const series = reconstructSeries(unlocktimes, 10, 42.5, "30d", FIXED_TODAY);
-    expect(series.every((p) => p.community === 42.5)).toBe(true);
-  });
-
-  it("returns 0 for 'you' when totalAchievements is 0", () => {
-    const series = reconstructSeries([], 0, 45, "30d", FIXED_TODAY);
-    expect(series.every((p) => p.you === 0)).toBe(true);
-  });
-
-  it("last point 'you' equals total unlocked / total achievements * 100", () => {
-    const totalAchievements = 10;
-    const allUnlocked = Array.from({ length: totalAchievements }, (_, i) =>
-      Math.floor((now - (i + 1) * 86400000) / 1000),
-    );
-    const series = reconstructSeries(
-      allUnlocked,
-      totalAchievements,
-      45,
-      "30d",
-      FIXED_TODAY,
-    );
-    expect(series.at(-1)!.you).toBe(100);
-  });
-});
-
 // --- Exported constants ---
 
 describe("exported constants", () => {
   it("DASHBOARD_FILTERS lists all/owned/tracked", () => {
     expect(DASHBOARD_FILTERS).toEqual(["all", "owned", "tracked"]);
-  });
-
-  it("DASHBOARD_RANGES lists 7d/30d/90d/1y", () => {
-    expect(DASHBOARD_RANGES).toEqual(["7d", "30d", "90d", "1y"]);
   });
 });
 
@@ -301,18 +242,5 @@ describe("computeStats with fixture-derived games", () => {
     expect(stats.perfectGames).toBe(1);
     // 3 of 4 fixture unlocktimes fall within the last 30 days (the 40-day one is outside)
     expect(stats.achievementsEarnedDelta).toBe(3);
-  });
-});
-
-describe("reconstructSeries with fixture unlocktimes", () => {
-  it("produces a step curve from the 4 unlock timestamps", () => {
-    const unlocktimes = playerAchievementsFixture.playerstats.achievements
-      .filter((a) => a.achieved === 1)
-      .map((a) => a.unlocktime);
-
-    const series = reconstructSeries(unlocktimes, 6, 40, "90d", FIXED_TODAY);
-    expect(series).toHaveLength(13);
-    expect(series.at(-1)!.you).toBeCloseTo(66.7, 1);
-    expect(series.every((p) => p.community === 40)).toBe(true);
   });
 });

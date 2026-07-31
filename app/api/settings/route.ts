@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPreferences, savePreferences } from "@/lib/settings";
 import { getSession } from "@/lib/auth";
-import type { GameFilter, DateRange } from "@/lib/types";
+import type { GameFilter } from "@/lib/types";
 
 export async function GET() {
   const session = await getSession();
@@ -20,7 +20,6 @@ export async function PUT(request: Request) {
 
   const body = (await request.json()) as {
     defaultFilter?: GameFilter;
-    defaultRange?: DateRange;
   };
 
   const prefs = await savePreferences(session.steamId, body);

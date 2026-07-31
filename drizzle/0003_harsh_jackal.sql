@@ -1,0 +1,1 @@
+DROP TABLE `global_game_snapshots`;

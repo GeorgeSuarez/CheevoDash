@@ -14,7 +14,6 @@ export default async function InsightsPage() {
   const data = await getDashboardData({
     steamId: session.steamId,
     filter: "all",
-    range: "30d",
   });
 
   return <InsightsView initialData={data} />;

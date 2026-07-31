@@ -10,12 +10,9 @@ import {
   getPlayerSummaries,
   getSchemaForGame,
 } from "./steam";
-import { reconstructSeries } from "./series";
 import type {
   DashboardData,
   DashboardError,
-  DateRange,
-  Friend,
   Game,
   GameAchievement,
   GameFilter,
@@ -24,8 +21,6 @@ import type {
   Stats,
   SteamGlobalAchievement,
 } from "./types";
-
-export { reconstructSeries } from "./series";
 
 const CONCURRENCY = 5;
 
@@ -272,7 +267,7 @@ async function writeSnapshot(steamId: string, stats: Stats): Promise<void> {
 }
 
 export async function snapshotUser(steamId: string): Promise<void> {
-  const data = await getDashboardData({ steamId, filter: "all", range: "30d" });
+  const data = await getDashboardData({ steamId, filter: "all" });
   if (data.error !== null) return;
   await writeSnapshot(steamId, data.stats);
 }
@@ -358,12 +353,10 @@ function computeRarityDistribution(
 export async function getDashboardData({
   steamId,
   filter = "all",
-  range = "30d",
   today = new Date(),
 }: {
   steamId: string;
   filter?: GameFilter;
-  range?: DateRange;
   today?: Date;
 }): Promise<DashboardData> {
   const result = await getOwnedGames(steamId);
@@ -380,9 +373,6 @@ export async function getDashboardData({
         gamesTracked: 0,
         perfectGames: 0,
       },
-      achievementSeries: reconstructSeries([], 0, 0, range, today),
-      comparison: { you: 0, community: 0 },
-      friends: [],
       games: [],
       recentAchievements: [],
       rarestAchievements: [],
@@ -405,9 +395,6 @@ export async function getDashboardData({
         gamesTracked: 0,
         perfectGames: 0,
       },
-      achievementSeries: reconstructSeries([], 0, 0, range, today),
-      comparison: { you: 0, community: 0 },
-      friends: [],
       games: [],
       recentAchievements: [],
       rarestAchievements: [],
@@ -473,33 +460,7 @@ export async function getDashboardData({
   const filtered = filterGames(gamesWithData, filter);
   const stats = computeStats(filtered);
 
-  const allUnlocktimes = filtered.flatMap((g) => g.unlocktimes);
-  const totalAchievements = filtered.reduce(
-    (sum, g) => sum + g.achievements.total,
-    0,
-  );
-  const communityAvg =
-    filtered.length === 0
-      ? 0
-      : Math.round(
-          (filtered.reduce((sum, g) => sum + (g.comparison.percent || 0), 0) /
-            filtered.length) *
-            10,
-        ) / 10;
-
-  const safeCommunityAvg = Number.isNaN(communityAvg) ? 0 : communityAvg;
-
-  const achievementSeries = reconstructSeries(
-    allUnlocktimes,
-    totalAchievements,
-    safeCommunityAvg,
-    range,
-    today,
-  );
-
-  const comparison = { you: stats.avgCompletion, community: safeCommunityAvg };
   const games = [...filtered].sort((a, b) => b.hours - a.hours);
-  const topGameWithAch = games.find((g) => g.achievements.total > 0);
 
   // Collect all earned achievement entries for recent and rarest achievements
   const allEarnedEntries = detailedResults.flatMap((r) =>
@@ -523,11 +484,8 @@ export async function getDashboardData({
   // Compute rarity distribution from all earned entries
   const rarityDistribution = computeRarityDistribution(allEarnedEntries);
 
-  // Run friends, snapshot, and user info in parallel (all independent)
-  const [friends, snapshot, user] = await Promise.all([
-    topGameWithAch
-      ? getFriendsComparison(steamId, topGameWithAch.appId, 5)
-      : Promise.resolve([] as Friend[]),
+  // Run snapshot and user info in parallel (all independent)
+  const [snapshot, user] = await Promise.all([
     getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
     getUserInfo(steamId),
   ]);
@@ -538,7 +496,7 @@ export async function getDashboardData({
     stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
   }
 
-  return { stats, achievementSeries, comparison, friends, games, recentAchievements, rarestAchievements, rarityDistribution, error: null, user };
+  return { stats, games, recentAchievements, rarestAchievements, rarityDistribution, error: null, user };
 }
 
 // --- Lightweight games-only entry point ---
@@ -622,72 +580,7 @@ export async function getGamesData({
   return { games, user, error: null };
 }
 
-// --- Per-game friends comparison ---
-
-export async function getFriendsComparison(
-  steamId: string,
-  appId: number,
-  limit = 50,
-): Promise<Friend[]> {
-  const [friendIds, yourAchievements] = await Promise.all([
-    getFriendList(steamId),
-    getPlayerAchievements(steamId, appId),
-  ]);
-
-  const yourEarned = yourAchievements.filter((a) => a.achieved === 1).length;
-  const yourTotal = yourAchievements.length;
-  const yourPercent =
-    yourTotal === 0 ? 0 : Math.round((yourEarned / yourTotal) * 1000) / 10;
-
-  const you: Friend = {
-    id: "f-you",
-    name: "You",
-    percent: Number.isNaN(yourPercent) ? 0 : yourPercent,
-    avatar: "",
-    isYou: true,
-  };
-
-  if (friendIds.length === 0) {
-    return [you];
-  }
-
-  const topFriendIds = friendIds.slice(0, limit + 2);
-  const summaries = await getPlayerSummaries(topFriendIds);
-
-  const friendsWithData = await mapWithConcurrency(
-    summaries,
-    CONCURRENCY,
-    async (summary) => {
-      const achievements = await getPlayerAchievements(summary.steamid, appId);
-      const earned = achievements.filter((a) => a.achieved === 1).length;
-      const total = achievements.length;
-      const percent =
-        total === 0 ? 0 : Math.round((earned / total) * 1000) / 10;
-      return {
-        id: summary.steamid,
-        name: summary.personaname,
-        percent: Number.isNaN(percent) ? 0 : percent,
-        avatar: summary.avatarmedium,
-        isYou: false,
-        total,
-      };
-    },
-  );
-
-  const sorted = friendsWithData
-    .filter((f): f is Friend & { total: number } => f !== null && f.total > 0)
-    .sort((a, b) => b.percent - a.percent)
-    .slice(0, limit)
-    .map(({ total, ...friend }) => {
-      void total;
-      return friend;
-    });
-
-  return [you, ...sorted];
-}
-
 export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
-export const DASHBOARD_RANGES: DateRange[] = ["7d", "30d", "90d", "1y"];
 
 // --- Friends list ---
 
@@ -751,7 +644,7 @@ export interface AchievementsOverviewData {
 export async function getAchievementsData(
   steamId: string,
 ): Promise<AchievementsOverviewData> {
-  const dashboardData = await getDashboardData({ steamId, filter: "all", range: "30d" });
+  const dashboardData = await getDashboardData({ steamId, filter: "all" });
 
   if (dashboardData.error) {
     return {

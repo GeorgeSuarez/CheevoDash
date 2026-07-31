@@ -7,19 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Save, CheckCircle2 } from "lucide-react";
 import type { UserPreferences } from "@/lib/settings";
-import type { DateRange, GameFilter } from "@/lib/types";
+import type { GameFilter } from "@/lib/types";
 
 const FILTER_OPTIONS: { value: GameFilter; label: string }[] = [
   { value: "all", label: "All Games" },
   { value: "owned", label: "Owned Games" },
   { value: "tracked", label: "Tracked Games" },
-];
-
-const RANGE_OPTIONS: { value: DateRange; label: string }[] = [
-  { value: "7d", label: "7 Days" },
-  { value: "30d", label: "30 Days" },
-  { value: "90d", label: "90 Days" },
-  { value: "1y", label: "1 Year" },
 ];
 
 export function SettingsView({
@@ -94,30 +87,6 @@ export function SettingsView({
                       }
                       className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                         prefs.defaultFilter === opt.value
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Default Date Range
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {RANGE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() =>
-                        setPrefs((p) => ({ ...p, defaultRange: opt.value }))
-                      }
-                      className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                        prefs.defaultRange === opt.value
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                       }`}

@@ -1,7 +1,5 @@
 export type GameFilter = "all" | "owned" | "tracked";
 
-export type DateRange = "7d" | "30d" | "90d" | "1y";
-
 export interface AchievementPair {
   earned: number;
   total: number;
@@ -25,25 +23,6 @@ export interface Game {
   owned: boolean;
   tracked: boolean;
   unlocktimes: number[];
-}
-
-export interface Friend {
-  id: string;
-  name: string;
-  percent: number;
-  avatar: string;
-  isYou: boolean;
-}
-
-export interface AchievementDataPoint {
-  date: string;
-  you: number;
-  community: number;
-}
-
-export interface ComparisonData {
-  you: number;
-  community: number;
 }
 
 export interface Stats {
@@ -93,9 +72,6 @@ export interface RarityTier {
 
 export interface DashboardData {
   stats: Stats;
-  achievementSeries: AchievementDataPoint[];
-  comparison: ComparisonData;
-  friends: Friend[];
   games: Game[];
   recentAchievements: RecentAchievement[];
   rarestAchievements: RecentAchievement[];
@@ -105,11 +81,6 @@ export interface DashboardData {
     personaName: string;
     avatar: string;
   };
-}
-
-export interface DashboardQuery {
-  filter: GameFilter;
-  range: DateRange;
 }
 
 // --- Steam Web API raw types ---

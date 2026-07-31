@@ -21,8 +21,8 @@ export default async function FriendComparePage({
   }
 
   const [yourData, friendData, { friends }] = await Promise.all([
-    getDashboardData({ steamId: session.steamId, filter: "all", range: "30d" }),
-    getDashboardData({ steamId: friendSteamId, filter: "all", range: "30d" }),
+    getDashboardData({ steamId: session.steamId, filter: "all" }),
+    getDashboardData({ steamId: friendSteamId, filter: "all" }),
     getFriendsData(session.steamId),
   ]);
 
