@@ -104,7 +104,7 @@ components/
 └── ui/                          # shadcn/ui primitives
 lib/
 ├── auth.ts                      # Session helpers (jose JWTs)
-├── dashboard.ts                 # Data layer orchestrating Steam + DB
+├── dashboard.ts                 # getLibrarySnapshot seam + thin page projections
 ├── steam.ts                     # Typed, cached Steam Web API client
 ├── env.ts                       # Typed env var access
 ├── types.ts                     # Shared interfaces

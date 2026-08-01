@@ -1,4 +1,5 @@
 import { and, eq, lt, desc } from "drizzle-orm";
+import { cache } from "react";
 import { getDb } from "./db/client";
 import { snapshots, trackedGames, users } from "./db/schema";
 import {
@@ -267,18 +268,16 @@ async function writeSnapshot(steamId: string, stats: Stats): Promise<void> {
 }
 
 export async function snapshotUser(steamId: string): Promise<void> {
-  const data = await getDashboardData({ steamId, filter: "all" });
-  if (data.error !== null) return;
-  await writeSnapshot(steamId, data.stats);
+  const snapshot = await getLibrarySnapshot(steamId);
+  if (snapshot.error !== null) return;
+  await writeSnapshot(steamId, computeStats(snapshot.games));
 }
 
 // --- Recent achievements ---
 
 const ACHIEVEMENTS_LIMIT = 5;
 
-async function enrichWithSchemas(
-  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
-): Promise<RecentAchievement[]> {
+async function enrichWithSchemas(entries: EarnedEntry[]): Promise<RecentAchievement[]> {
   const uniqueAppIds = [...new Set(entries.map((e) => e.appId))];
   const schemaMaps = await Promise.all(
     uniqueAppIds.map((appId) => getSchemaForGame(appId)),
@@ -304,7 +303,7 @@ async function enrichWithSchemas(
 }
 
 async function computeRecentAchievements(
-  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
+  entries: EarnedEntry[],
 ): Promise<RecentAchievement[]> {
   const top = [...entries]
     .sort((a, b) => b.unlocktime - a.unlocktime)
@@ -313,7 +312,7 @@ async function computeRecentAchievements(
 }
 
 async function computeRarestAchievements(
-  entries: { appId: number; gameName: string; apiname: string; unlocktime: number; globalPercent?: number }[],
+  entries: EarnedEntry[],
 ): Promise<RecentAchievement[]> {
   const top = [...entries]
     .filter((e) => e.globalPercent != null && e.globalPercent > 0)
@@ -332,12 +331,10 @@ const RARITY_TIERS = [
   { tier: "Ultra Rare", min: 0, max: 5, color: "#fbbf24" },
 ] as const;
 
-function computeRarityDistribution(
-  entries: { globalPercent?: number }[],
-): RarityTier[] {
+function computeRarityDistribution(entries: EarnedEntry[]): RarityTier[] {
   const tiers = RARITY_TIERS.map((t) => ({ ...t, count: 0, color: t.color }));
   for (const e of entries) {
-    const pct = e.globalPercent ?? 100;
+    const pct = e.globalPercent;
     for (const tier of tiers) {
       if (pct >= tier.min && pct < tier.max) {
         tier.count++;
@@ -350,6 +347,120 @@ function computeRarityDistribution(
 
 // --- Main entry point ---
 
+export interface EarnedEntry {
+  appId: number;
+  gameName: string;
+  apiname: string;
+  unlocktime: number;
+  globalPercent: number;
+}
+
+export interface LibrarySnapshot {
+  games: Game[];
+  earnedEntries: EarnedEntry[];
+  user?: { personaName: string; avatar: string };
+  error: DashboardError;
+}
+
+function emptyStats(): Stats {
+  return {
+    achievementsEarned: 0,
+    achievementsEarnedDelta: 0,
+    avgCompletion: 0,
+    avgCompletionDelta: null,
+    gamesOwned: 0,
+    gamesOwnedDelta: null,
+    gamesTracked: 0,
+    perfectGames: 0,
+  };
+}
+
+export const getLibrarySnapshot = cache(
+  async (steamId: string): Promise<LibrarySnapshot> => {
+    const result = await getOwnedGames(steamId);
+
+    if (!result.ok) {
+      return {
+        games: [],
+        earnedEntries: [],
+        error: {
+          type: result.reason,
+          status: result.status ?? undefined,
+        },
+      };
+    }
+
+    if (result.games.length === 0) {
+      return { games: [], earnedEntries: [], error: null };
+    }
+
+    const sorted = [...result.games].sort(
+      (a, b) => b.playtime_forever - a.playtime_forever,
+    );
+    const detailedSlice = sorted.filter(
+      (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
+    );
+    const detailedIds = new Set(detailedSlice.map((g) => g.appid));
+    const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
+
+    const [trackedSet, detailedResults, user] = await Promise.all([
+      getTrackedAppIds(steamId),
+      mapWithConcurrency(
+        detailedSlice,
+        CONCURRENCY,
+        async (owned) => {
+          const data = await fetchGameData(steamId, owned.appid);
+          const game = buildGame(
+            owned.appid,
+            owned.name,
+            owned.playtime_forever,
+            data,
+            false, // placeholder, replaced below
+          );
+          return { game, earnedEntries: data.earnedEntries };
+        },
+      ),
+      getUserInfo(steamId),
+    ]);
+
+    const detailedGames = detailedResults.map((r) => r.game);
+
+    for (const game of detailedGames) {
+      game.tracked = trackedSet.has(game.appId);
+    }
+
+    const basicGames: Game[] = basicSlice.map((owned) => ({
+      id: String(owned.appid),
+      appId: owned.appid,
+      name: owned.name,
+      hours: Math.round(owned.playtime_forever / 60),
+      completion: 0,
+      achievements: { earned: 0, total: 0 },
+      comparison: { text: "No data", percent: 0, isPositive: false },
+      image: getGameHeaderImage(owned.appid),
+      owned: true,
+      tracked: trackedSet.has(owned.appid),
+      unlocktimes: [],
+    }));
+
+    const games = [...detailedGames, ...basicGames].sort(
+      (a, b) => b.hours - a.hours,
+    );
+
+    const earnedEntries: EarnedEntry[] = detailedResults.flatMap((r) =>
+      r.earnedEntries.map((e) => ({
+        appId: r.game.appId,
+        gameName: r.game.name,
+        apiname: e.apiname,
+        unlocktime: e.unlocktime,
+        globalPercent: e.globalPercent,
+      })),
+    );
+
+    return { games, earnedEntries, user, error: null };
+  },
+);
+
 export async function getDashboardData({
   steamId,
   filter = "all",
@@ -359,144 +470,48 @@ export async function getDashboardData({
   filter?: GameFilter;
   today?: Date;
 }): Promise<DashboardData> {
-  const result = await getOwnedGames(steamId);
+  const snapshot = await getLibrarySnapshot(steamId);
 
-  if (!result.ok) {
+  if (snapshot.error) {
     return {
-      stats: {
-        achievementsEarned: 0,
-        achievementsEarnedDelta: 0,
-        avgCompletion: 0,
-        avgCompletionDelta: null,
-        gamesOwned: 0,
-        gamesOwnedDelta: null,
-        gamesTracked: 0,
-        perfectGames: 0,
-      },
+      stats: emptyStats(),
       games: [],
       recentAchievements: [],
       rarestAchievements: [],
       rarityDistribution: [],
-      error: { type: result.reason, status: result.status ?? undefined },
+      error: snapshot.error,
     };
   }
 
-  const ownedGames = result.games;
+  const games = filterGames(snapshot.games, filter);
+  const stats = computeStats(games);
 
-  if (ownedGames.length === 0) {
-    return {
-      stats: {
-        achievementsEarned: 0,
-        achievementsEarnedDelta: 0,
-        avgCompletion: 0,
-        avgCompletionDelta: null,
-        gamesOwned: 0,
-        gamesOwnedDelta: null,
-        gamesTracked: 0,
-        perfectGames: 0,
-      },
-      games: [],
-      recentAchievements: [],
-      rarestAchievements: [],
-      rarityDistribution: [],
-      error: null,
-    };
-  }
+  const [recentAchievements, rarestAchievements, previousSnapshot] =
+    await Promise.all([
+      computeRecentAchievements(snapshot.earnedEntries),
+      computeRarestAchievements(snapshot.earnedEntries),
+      getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
+    ]);
 
-  // Sort by playtime descending and split into detailed vs basic
-  const sorted = [...ownedGames].sort(
-    (a, b) => b.playtime_forever - a.playtime_forever,
-  );
-  const detailedSlice = sorted.filter(
-    (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
-  );
-  const detailedIds = new Set(detailedSlice.map((g) => g.appid));
-  const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
+  const rarityDistribution = computeRarityDistribution(snapshot.earnedEntries);
 
-  // Fetch tracked IDs in parallel with game achievement data
-  const [trackedSet, detailedResults] = await Promise.all([
-    getTrackedAppIds(steamId),
-    mapWithConcurrency(
-      detailedSlice,
-      CONCURRENCY,
-      async (owned) => {
-        const data = await fetchGameData(steamId, owned.appid);
-        const game = buildGame(
-          owned.appid,
-          owned.name,
-          owned.playtime_forever,
-          data,
-          false, // placeholder, replaced below
-        );
-        return { game, earnedEntries: data.earnedEntries };
-      },
-    ),
-  ]);
-
-  const detailedGames = detailedResults.map((r) => r.game);
-
-  // Patch tracked flag after parallel fetch completes
-  for (const game of detailedGames) {
-    game.tracked = trackedSet.has(game.appId);
-  }
-
-  // Create basic game objects for the rest (no API calls)
-  const basicGames: Game[] = basicSlice.map((owned) => ({
-    id: String(owned.appid),
-    appId: owned.appid,
-    name: owned.name,
-    hours: Math.round(owned.playtime_forever / 60),
-    completion: 0,
-    achievements: { earned: 0, total: 0 },
-    comparison: { text: "No data", percent: 0, isPositive: false },
-    image: getGameHeaderImage(owned.appid),
-    owned: true,
-    tracked: trackedSet.has(owned.appid),
-    unlocktimes: [],
-  }));
-
-  const gamesWithData = [...detailedGames, ...basicGames];
-
-  const filtered = filterGames(gamesWithData, filter);
-  const stats = computeStats(filtered);
-
-  const games = [...filtered].sort((a, b) => b.hours - a.hours);
-
-  // Collect all earned achievement entries for recent and rarest achievements
-  const allEarnedEntries = detailedResults.flatMap((r) =>
-    r.earnedEntries.map((e) => ({
-      appId: r.game.appId,
-      gameName: r.game.name,
-      apiname: e.apiname,
-      unlocktime: e.unlocktime,
-      globalPercent: e.globalPercent,
-    })),
-  );
-  const recentAchievements =
-    allEarnedEntries.length === 0
-      ? []
-      : await computeRecentAchievements(allEarnedEntries);
-  const rarestAchievements =
-    allEarnedEntries.length === 0
-      ? []
-      : await computeRarestAchievements(allEarnedEntries);
-
-  // Compute rarity distribution from all earned entries
-  const rarityDistribution = computeRarityDistribution(allEarnedEntries);
-
-  // Run snapshot and user info in parallel (all independent)
-  const [snapshot, user] = await Promise.all([
-    getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
-    getUserInfo(steamId),
-  ]);
-
-  if (snapshot) {
+  if (previousSnapshot) {
     stats.avgCompletionDelta =
-      Math.round((stats.avgCompletion - snapshot.avgCompletion) * 10) / 10;
-    stats.gamesOwnedDelta = stats.gamesOwned - snapshot.gamesOwned;
+      Math.round(
+        (stats.avgCompletion - previousSnapshot.avgCompletion) * 10,
+      ) / 10;
+    stats.gamesOwnedDelta = stats.gamesOwned - previousSnapshot.gamesOwned;
   }
 
-  return { stats, games, recentAchievements, rarestAchievements, rarityDistribution, error: null, user };
+  return {
+    stats,
+    games,
+    recentAchievements,
+    rarestAchievements,
+    rarityDistribution,
+    error: null,
+    user: snapshot.user,
+  };
 }
 
 // --- Lightweight games-only entry point ---
@@ -512,72 +527,12 @@ export async function getGamesData({
 }: {
   steamId: string;
 }): Promise<GamesData> {
-  const result = await getOwnedGames(steamId);
-
-  if (!result.ok) {
-    return {
-      games: [],
-      error: { type: result.reason, status: result.status ?? undefined },
-    };
-  }
-
-  const ownedGames = result.games;
-  if (ownedGames.length === 0) {
-    return { games: [], error: null };
-  }
-
-  const sorted = [...ownedGames].sort(
-    (a, b) => b.playtime_forever - a.playtime_forever,
-  );
-  const detailedSlice = sorted.filter(
-    (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
-  );
-  const detailedIds = new Set(detailedSlice.map((g) => g.appid));
-  const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
-
-  const [trackedSet, detailedGames] = await Promise.all([
-    getTrackedAppIds(steamId),
-    mapWithConcurrency(
-      detailedSlice,
-      CONCURRENCY,
-      async (owned) => {
-        const data = await fetchGameData(steamId, owned.appid);
-        return buildGame(
-          owned.appid,
-          owned.name,
-          owned.playtime_forever,
-          data,
-          false, // placeholder, replaced below
-        );
-      },
-    ),
-  ]);
-
-  for (const game of detailedGames) {
-    game.tracked = trackedSet.has(game.appId);
-  }
-
-  const basicGames: Game[] = basicSlice.map((owned) => ({
-    id: String(owned.appid),
-    appId: owned.appid,
-    name: owned.name,
-    hours: Math.round(owned.playtime_forever / 60),
-    completion: 0,
-    achievements: { earned: 0, total: 0 },
-    comparison: { text: "No data", percent: 0, isPositive: false },
-    image: getGameHeaderImage(owned.appid),
-    owned: true,
-    tracked: trackedSet.has(owned.appid),
-    unlocktimes: [],
-  }));
-
-  const games = [...detailedGames, ...basicGames].sort(
-    (a, b) => b.hours - a.hours,
-  );
-
-  const user = await getUserInfo(steamId);
-
-  return { games, user, error: null };
+  const snapshot = await getLibrarySnapshot(steamId);
+  return {
+    games: snapshot.games,
+    user: snapshot.user,
+    error: snapshot.error,
+  };
 }
 
 export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
@@ -644,89 +599,73 @@ export interface AchievementsOverviewData {
 export async function getAchievementsData(
   steamId: string,
 ): Promise<AchievementsOverviewData> {
-  const dashboardData = await getDashboardData({ steamId, filter: "all" });
+  const snapshot = await getLibrarySnapshot(steamId);
 
-  if (dashboardData.error) {
+  if (snapshot.error) {
     return {
-      stats: dashboardData.stats,
-      games: dashboardData.games,
+      stats: emptyStats(),
+      games: [],
       recentAchievements: [],
       rarestAchievements: [],
       rarestPerGame: [],
-      error: dashboardData.error,
-      user: dashboardData.user,
+      error: snapshot.error,
+      user: snapshot.user,
     };
   }
 
-  // Collect all earned entries from games (reuse the dashboard's game data)
-  // Need to re-fetch game data to get earnedEntries since they aren't stored in DashboardData
-  const sorted = [...dashboardData.games].sort((a, b) => b.hours - a.hours);
-  const detailedSlice = sorted.filter(
-    (g) => g.achievements.total > 0,
-  );
-
-  const detailedResults = await mapWithConcurrency(
-    detailedSlice,
-    CONCURRENCY,
-    async (game) => {
-      const data = await fetchGameData(steamId, game.appId);
-      return data.earnedEntries.map((e) => ({
-        appId: game.appId,
-        gameName: game.name,
-        apiname: e.apiname,
-        unlocktime: e.unlocktime,
-        globalPercent: e.globalPercent,
-      }));
-    },
-  );
-
-  const allEarnedEntries = detailedResults.flat();
+  const games = snapshot.games;
+  const stats = computeStats(games);
 
   const [recentAchievements, rarestAchievements] = await Promise.all([
-    allEarnedEntries.length === 0
+    snapshot.earnedEntries.length === 0
       ? Promise.resolve([] as RecentAchievement[])
       : (async () => {
-          const top = [...allEarnedEntries]
+          const top = [...snapshot.earnedEntries]
             .sort((a, b) => b.unlocktime - a.unlocktime)
             .slice(0, 20);
           return enrichWithSchemas(top);
         })(),
-    allEarnedEntries.length === 0
+    snapshot.earnedEntries.length === 0
       ? Promise.resolve([] as RecentAchievement[])
       : (async () => {
-          const top = [...allEarnedEntries]
-            .filter((e) => e.globalPercent != null && e.globalPercent > 0)
-            .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))
+          const top = [...snapshot.earnedEntries]
+            .filter((e) => e.globalPercent > 0)
+            .sort((a, b) => a.globalPercent - b.globalPercent)
             .slice(0, 10);
           return enrichWithSchemas(top);
         })(),
   ]);
 
-  // Compute rarest per game
-  const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = [];
-  for (const game of detailedSlice) {
-    const gameEntries = allEarnedEntries.filter((e) => e.appId === game.appId);
-    const rarest = [...gameEntries]
-      .filter((e) => e.globalPercent != null && e.globalPercent > 0)
-      .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))[0];
-    if (rarest) {
-      const enriched = await enrichWithSchemas([rarest]);
-      rarestPerGame.push({
-        appId: game.appId,
-        gameName: game.name,
-        achievement: enriched[0],
-      });
-    }
-  }
+  const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = (
+    await Promise.all(
+      games
+        .filter((g) => g.achievements.total > 0)
+        .map(async (game) => {
+          const gameEntries = snapshot.earnedEntries.filter(
+            (e) => e.appId === game.appId,
+          );
+          const rarest = [...gameEntries]
+            .filter((e) => e.globalPercent > 0)
+            .sort((a, b) => a.globalPercent - b.globalPercent)[0];
+          if (!rarest) return null;
+          const enriched = await enrichWithSchemas([rarest]);
+          return {
+            appId: game.appId,
+            gameName: game.name,
+            achievement: enriched[0],
+          };
+        }),
+    )
+  ).filter((r): r is NonNullable<typeof r> => r !== null);
 
   return {
-    stats: dashboardData.stats,
-    games: dashboardData.games,
+    stats,
+    games,
     recentAchievements,
     rarestAchievements,
     rarestPerGame,
     error: null,
-    user: dashboardData.user,
+    user: snapshot.user,
   };
 }
 
