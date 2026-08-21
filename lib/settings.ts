@@ -67,9 +67,7 @@ export function validateRarityTiers(
     });
   }
   for (let i = 1; i < tiers.length; i++) {
-    if (tiers[i].max > tiers[i - 1].min || tiers[i].min !== tiers[i - 1].max) {
-      return null;
-    }
+    if (tiers[i].max !== tiers[i - 1].min) return null;
   }
   return tiers;
 }

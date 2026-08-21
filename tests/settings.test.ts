@@ -82,7 +82,7 @@ describe("validateRarityTiers", () => {
 
   it("rejects gaps between adjacent tiers", () => {
     const gapped = structuredClone(validTiers);
-    gapped[1].min = 30;
+    gapped[1].max = 45;
     expect(validateRarityTiers(gapped)).toBeNull();
   });
 
