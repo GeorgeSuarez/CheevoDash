@@ -70,6 +70,21 @@ export interface RarityTier {
   color: string;
 }
 
+export interface RarityTierConfig {
+  tier: string;
+  min: number;
+  max: number;
+  color: string;
+}
+
+export const DEFAULT_RARITY_TIERS: RarityTierConfig[] = [
+  { tier: "Common", min: 50, max: 100.1, color: "var(--muted-foreground)" },
+  { tier: "Uncommon", min: 25, max: 50, color: "#4ade80" },
+  { tier: "Rare", min: 10, max: 25, color: "#60a5fa" },
+  { tier: "Very Rare", min: 5, max: 10, color: "#c084fc" },
+  { tier: "Ultra Rare", min: 0, max: 5, color: "#fbbf24" },
+];
+
 export interface DashboardData {
   stats: Stats;
   games: Game[];

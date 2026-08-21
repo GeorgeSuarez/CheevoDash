@@ -185,13 +185,15 @@ function GameCard({ game: initialGame }: { game: Game }) {
 export function GamesView({
   games,
   user,
+  defaultSort = "playtime",
 }: {
   games: Game[];
   user?: { personaName: string; avatar: string };
+  defaultSort?: GameSortKey;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<GameFilter>("all");
-  const [sort, setSort] = useState<GameSortKey>("playtime");
+  const [sort, setSort] = useState<GameSortKey>(defaultSort);
   const [visibleCount, setVisibleCount] = useState(GAME_CHUNK_SIZE);
   const [prevViewKey, setPrevViewKey] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);

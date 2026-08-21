@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPreferences, savePreferences } from "@/lib/settings";
 import { getSession } from "@/lib/auth";
-import type { GameFilter } from "@/lib/types";
+import type { UserPreferences } from "@/lib/settings";
 
 export async function GET() {
   const session = await getSession();
@@ -18,9 +18,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as {
-    defaultFilter?: GameFilter;
-  };
+  const body = (await request.json()) as Partial<UserPreferences>;
 
   const prefs = await savePreferences(session.steamId, body);
   return NextResponse.json(prefs);

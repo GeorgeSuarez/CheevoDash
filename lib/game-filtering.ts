@@ -53,3 +53,9 @@ export function searchSortGames(
   }
   return sorted;
 }
+
+export function hideGames(games: Game[], hiddenAppIds: number[]): Game[] {
+  if (hiddenAppIds.length === 0) return games;
+  const hidden = new Set(hiddenAppIds);
+  return games.filter((g) => !hidden.has(g.appId));
+}

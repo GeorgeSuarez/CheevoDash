@@ -43,6 +43,13 @@
       "when": 1787293312306,
       "tag": "0005_smooth_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787294208883,
+      "tag": "0006_slimy_changeling",
+      "breakpoints": true
     }
   ]
 }

@@ -24,10 +24,14 @@ import type {
   GameAchievement,
   GameFilter,
   RarityTier,
+  RarityTierConfig,
   RecentAchievement,
   Stats,
   SteamGlobalAchievement,
 } from "./types";
+import { DEFAULT_RARITY_TIERS } from "./types";
+import { getPreferences } from "./settings";
+import { hideGames } from "./game-filtering";
 
 const CONCURRENCY = 5;
 
@@ -36,9 +40,12 @@ const CONCURRENCY = 5;
 export {
   filterGames,
   searchSortGames,
+  hideGames,
   GAME_SORT_KEYS,
 } from "./game-filtering";
 export type { GameSortKey, GameViewOptions } from "./game-filtering";
+export { DEFAULT_RARITY_TIERS };
+export { computeRarityDistribution };
 
 export function computeStats(games: Game[]): Stats {
   const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);
@@ -324,26 +331,21 @@ async function computeRarestAchievements(
 
 // --- Rarity distribution ---
 
-const RARITY_TIERS = [
-  { tier: "Common", min: 50, max: 100.1, color: "var(--muted-foreground)" },
-  { tier: "Uncommon", min: 25, max: 50, color: "#4ade80" },
-  { tier: "Rare", min: 10, max: 25, color: "#60a5fa" },
-  { tier: "Very Rare", min: 5, max: 10, color: "#c084fc" },
-  { tier: "Ultra Rare", min: 0, max: 5, color: "#fbbf24" },
-] as const;
-
-function computeRarityDistribution(entries: EarnedEntry[]): RarityTier[] {
-  const tiers = RARITY_TIERS.map((t) => ({ ...t, count: 0, color: t.color }));
+function computeRarityDistribution(
+  entries: EarnedEntry[],
+  tiers: RarityTierConfig[] = DEFAULT_RARITY_TIERS,
+): RarityTier[] {
+  const buckets = tiers.map((t) => ({ ...t, count: 0 }));
   for (const e of entries) {
     const pct = e.globalPercent;
-    for (const tier of tiers) {
-      if (pct >= tier.min && pct < tier.max) {
-        tier.count++;
+    for (const bucket of buckets) {
+      if (pct >= bucket.min && pct < bucket.max) {
+        bucket.count++;
         break;
       }
     }
   }
-  return tiers.map(({ tier, count, color }) => ({ tier, count, color }));
+  return buckets.map(({ tier, count, color }) => ({ tier, count, color }));
 }
 
 // --- Main entry point ---
@@ -622,17 +624,26 @@ export async function getDashboardData({
     };
   }
 
-  const games = filterGames(snapshot.games, filter);
-  const stats = computeStats(games);
+  const [prefs, previousSnapshot] = await Promise.all([
+    getPreferences(steamId),
+    getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
+  ]);
 
-  const [recentAchievements, rarestAchievements, previousSnapshot] =
-    await Promise.all([
-      computeRecentAchievements(snapshot.earnedEntries),
-      computeRarestAchievements(snapshot.earnedEntries),
-      getLatestSnapshot(steamId, today.toISOString().slice(0, 10)),
-    ]);
+  const allGames = filterGames(snapshot.games, filter);
+  const stats = computeStats(allGames);
+  const games = hideGames(allGames, prefs.hiddenAppIds);
 
-  const rarityDistribution = computeRarityDistribution(snapshot.earnedEntries);
+  const recentAchievements = await computeRecentAchievements(
+    snapshot.earnedEntries,
+  );
+  const rarestAchievements = await computeRarestAchievements(
+    snapshot.earnedEntries,
+  );
+
+  const rarityDistribution = computeRarityDistribution(
+    snapshot.earnedEntries,
+    prefs.rarityTiers ?? DEFAULT_RARITY_TIERS,
+  );
 
   if (previousSnapshot) {
     stats.avgCompletionDelta =
@@ -667,8 +678,9 @@ export async function getGamesData({
   steamId: string;
 }): Promise<GamesData> {
   const snapshot = await getLibrarySnapshot(steamId);
+  const prefs = await getPreferences(steamId);
   return {
-    games: snapshot.games,
+    games: hideGames(snapshot.games, prefs.hiddenAppIds),
     user: snapshot.user,
     error: snapshot.error,
   };
@@ -752,10 +764,8 @@ export async function getAchievementsData(
     };
   }
 
-  const games = snapshot.games;
-  const stats = computeStats(games);
-
-  const [recentAchievements, rarestAchievements] = await Promise.all([
+  const [prefs, recentAchievements, rarestAchievements] = await Promise.all([
+    getPreferences(steamId),
     snapshot.earnedEntries.length === 0
       ? Promise.resolve([] as RecentAchievement[])
       : (async () => {
@@ -774,6 +784,10 @@ export async function getAchievementsData(
           return enrichWithSchemas(top);
         })(),
   ]);
+
+  const allGames = snapshot.games;
+  const stats = computeStats(allGames);
+  const games = hideGames(allGames, prefs.hiddenAppIds);
 
   const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = (
     await Promise.all(

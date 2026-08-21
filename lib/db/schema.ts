@@ -49,6 +49,13 @@ export const userPreferences = sqliteTable("user_preferences", {
   defaultFilter: text("default_filter", { enum: ["all", "owned", "tracked"] })
     .notNull()
     .default("all"),
+  defaultSort: text("default_sort", {
+    enum: ["playtime", "completion", "achievements", "name"],
+  })
+    .notNull()
+    .default("playtime"),
+  hiddenAppIds: text("hidden_app_ids").notNull().default("[]"),
+  rarityTiers: text("rarity_tiers").notNull().default("[]"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date())
