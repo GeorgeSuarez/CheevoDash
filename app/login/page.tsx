@@ -19,14 +19,20 @@ export default async function LoginPage({
   }
 
   const { error } = await searchParams;
-  const errorMessages: Record<string, string> = {
-    auth_failed: "Steam could not verify your sign-in. Please try again.",
-    no_steamid: "We couldn't read your Steam ID. Please try again.",
-    db_error: "We couldn't save your profile. Your session still works.",
-  };
-  const errorMessage = error
-    ? (errorMessages[error] ?? "Something went wrong.")
-    : null;
+
+  function errorMessageFor(code: string): string {
+    switch (code) {
+      case "auth_failed":
+        return "Steam could not verify your sign-in. Please try again.";
+      case "no_steamid":
+        return "We couldn't read your Steam ID. Please try again.";
+      case "db_error":
+        return "We couldn't save your profile. Your session still works.";
+      default:
+        return "Something went wrong.";
+    }
+  }
+  const errorMessage = error ? errorMessageFor(error) : null;
 
   return (
     <main className="relative flex min-h-screen w-full flex-col items-center justify-center gap-8 overflow-hidden bg-background">

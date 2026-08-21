@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const appId = body?.appId;
-  if (typeof appId !== "number" || appId <= 0) {
+  if (!Number.isFinite(appId) || appId <= 0) {
     return NextResponse.json({ error: "Invalid appId" }, { status: 400 });
   }
 

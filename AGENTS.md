@@ -13,7 +13,7 @@ A Steam-style achievement dashboard built with Next.js 16, React 19, Tailwind v4
 - `npm run dev` — start the dev server (http://localhost:3000)
 - `npm run build` — production build
 - `npm run start` — serve the production build
-- `npm run lint` — run ESLint
+- `npm run lint` — run Oxlint (includes the custom `anti-slop` plugin in `tools/oxlint/`)
 - `npm run test` — run unit tests once (Vitest)
 - `npm run test:watch` — run tests in watch mode
 - `npm run db:generate` — generate Drizzle migrations from schema changes

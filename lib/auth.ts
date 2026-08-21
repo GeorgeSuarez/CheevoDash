@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { isString } from "./decode";
 
 const SESSION_COOKIE = "cheevodash_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -40,10 +41,8 @@ export async function getSession(): Promise<SessionPayload | null> {
 
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (typeof payload.steamId === "string") {
-      return { steamId: payload.steamId };
-    }
-    return null;
+    if (!isString(payload.steamId)) return null;
+    return { steamId: payload.steamId };
   } catch {
     return null;
   }

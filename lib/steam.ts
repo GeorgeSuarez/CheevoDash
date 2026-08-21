@@ -36,6 +36,7 @@ async function steamFetch<T>(
       );
       return { data: null, status: res.status };
     }
+    // SAFETY: T is the response contract of the Steam Web API endpoint encoded in url.
     const data = (await res.json()) as T;
     return { data, status: res.status };
   } catch (err) {

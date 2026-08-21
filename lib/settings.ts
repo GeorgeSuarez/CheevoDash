@@ -19,7 +19,7 @@ export async function getPreferences(
     if (rows.length > 0) {
       const row = rows[0];
       return {
-        defaultFilter: (row.defaultFilter as GameFilter) ?? "all",
+        defaultFilter: row.defaultFilter,
       };
     }
   } catch {
@@ -39,7 +39,7 @@ export async function savePreferences(
       ? prefs.defaultFilter
       : undefined;
 
-  const values: Record<string, string> = {};
+  const values: Partial<typeof userPreferences.$inferInsert> = {};
   if (filter) values.defaultFilter = filter;
 
   if (Object.keys(values).length === 0) {
@@ -49,7 +49,7 @@ export async function savePreferences(
   try {
     await getDb()
       .insert(userPreferences)
-      .values({ steamId, ...values } as typeof userPreferences.$inferInsert)
+      .values({ steamId, ...values })
       .onConflictDoUpdate({
         target: userPreferences.steamId,
         set: values,

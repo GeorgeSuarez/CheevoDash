@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDashboardData } from "@/lib/dashboard";
+import { DASHBOARD_FILTERS, getDashboardData } from "@/lib/dashboard";
 import { getSession } from "@/lib/auth";
-import type { GameFilter } from "@/lib/types";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -12,11 +11,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filterParam = searchParams.get("filter") ?? "all";
 
-  const filter = filterParam as GameFilter;
+  const filter = DASHBOARD_FILTERS.find((f) => f === filterParam);
 
-  const validFilters: GameFilter[] = ["all", "owned", "tracked"];
-
-  if (!validFilters.includes(filter)) {
+  if (!filter) {
     return NextResponse.json(
       { error: `Invalid filter: ${filterParam}` },
       { status: 400 },

@@ -20,8 +20,8 @@ function CompareRow({
   friendValue: number | string;
   format?: "number" | "percent";
 }) {
-  const yourNum = typeof yourValue === "number" ? yourValue : Number(yourValue);
-  const friendNum = typeof friendValue === "number" ? friendValue : Number(friendValue);
+  const yourNum = Number(yourValue);
+  const friendNum = Number(friendValue);
   const youWin = yourNum > friendNum;
   const tie = yourNum === friendNum;
 

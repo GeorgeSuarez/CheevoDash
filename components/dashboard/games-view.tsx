@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/select";
 import type { Game } from "@/lib/types";
 
-type SortKey = "playtime" | "completion" | "achievements" | "name";
+const SORT_KEYS = ["playtime", "completion", "achievements", "name"] as const;
+
+type SortKey = (typeof SORT_KEYS)[number];
 
 function CompletionRing({
   value,
@@ -273,7 +275,10 @@ export function GamesView({
               </Select>
               <Select
                 value={sort}
-                onValueChange={(v) => setSort(v as SortKey)}
+                onValueChange={(v) => {
+                  const next = SORT_KEYS.find((key) => key === v);
+                  if (next) setSort(next);
+                }}
               >
                 <SelectTrigger className="h-9 w-40 border-border/50 bg-card text-xs">
                   <SelectValue placeholder="Sort by" />

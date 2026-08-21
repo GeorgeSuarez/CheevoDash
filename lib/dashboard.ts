@@ -1,6 +1,7 @@
 import { and, eq, lt, desc } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "./db/client";
+import { isNumber } from "./decode";
 import {
   librarySnapshots,
   snapshots,
@@ -389,6 +390,18 @@ export function serializeSnapshot(snapshot: PersistedSnapshot): string {
   });
 }
 
+interface SnapshotWire {
+  version?: unknown;
+  fetchedAtMs?: unknown;
+  games?: unknown;
+  earnedEntries?: unknown;
+  user?: unknown;
+}
+
+function isSnapshotWire<T>(value: T): value is T & SnapshotWire {
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
 export function deserializeSnapshot(raw: string): PersistedSnapshot | null {
   let parsed: unknown;
   try {
@@ -396,21 +409,20 @@ export function deserializeSnapshot(raw: string): PersistedSnapshot | null {
   } catch {
     return null;
   }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+  if (!isSnapshotWire(parsed)) return null;
+  if (parsed.version !== SNAPSHOT_VERSION) return null;
+  if (!isNumber(parsed.fetchedAtMs)) return null;
+  if (!Array.isArray(parsed.games) || !Array.isArray(parsed.earnedEntries)) {
     return null;
   }
-  const obj = parsed as Record<string, unknown>;
-  if (obj.version !== SNAPSHOT_VERSION) return null;
-  if (typeof obj.fetchedAtMs !== "number") return null;
-  if (!Array.isArray(obj.games) || !Array.isArray(obj.earnedEntries)) {
-    return null;
-  }
+  // SAFETY: the version gate above only admits payloads written by
+  // serializeSnapshot, so games/earnedEntries/user match PersistedSnapshot.
   return {
-    version: obj.version,
-    fetchedAtMs: obj.fetchedAtMs,
-    games: obj.games as Game[],
-    earnedEntries: obj.earnedEntries as EarnedEntry[],
-    user: obj.user as PersistedSnapshot["user"],
+    version: parsed.version,
+    fetchedAtMs: parsed.fetchedAtMs,
+    games: parsed.games as Game[],
+    earnedEntries: parsed.earnedEntries as EarnedEntry[],
+    user: parsed.user as PersistedSnapshot["user"],
   };
 }
 
@@ -759,23 +771,19 @@ export async function getAchievementsData(
   const stats = computeStats(games);
 
   const [recentAchievements, rarestAchievements] = await Promise.all([
-    snapshot.earnedEntries.length === 0
-      ? Promise.resolve([] as RecentAchievement[])
-      : (async () => {
-          const top = [...snapshot.earnedEntries]
-            .sort((a, b) => b.unlocktime - a.unlocktime)
-            .slice(0, 20);
-          return enrichWithSchemas(top);
-        })(),
-    snapshot.earnedEntries.length === 0
-      ? Promise.resolve([] as RecentAchievement[])
-      : (async () => {
-          const top = [...snapshot.earnedEntries]
-            .filter((e) => e.globalPercent > 0)
-            .sort((a, b) => a.globalPercent - b.globalPercent)
-            .slice(0, 10);
-          return enrichWithSchemas(top);
-        })(),
+    (async () => {
+      const top = [...snapshot.earnedEntries]
+        .sort((a, b) => b.unlocktime - a.unlocktime)
+        .slice(0, 20);
+      return enrichWithSchemas(top);
+    })(),
+    (async () => {
+      const top = [...snapshot.earnedEntries]
+        .filter((e) => e.globalPercent > 0)
+        .sort((a, b) => a.globalPercent - b.globalPercent)
+        .slice(0, 10);
+      return enrichWithSchemas(top);
+    })(),
   ]);
 
   const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = (
