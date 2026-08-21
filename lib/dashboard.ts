@@ -1,6 +1,7 @@
 import { and, eq, lt, desc } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "./db/client";
+import { filterGames } from "./game-filtering";
 import {
   librarySnapshots,
   snapshots,
@@ -32,16 +33,12 @@ const CONCURRENCY = 5;
 
 // --- Pure transforms (exported for testing) ---
 
-export function filterGames(games: Game[], filter: GameFilter): Game[] {
-  switch (filter) {
-    case "owned":
-      return games.filter((g) => g.owned);
-    case "tracked":
-      return games.filter((g) => g.tracked);
-    default:
-      return games;
-  }
-}
+export {
+  filterGames,
+  searchSortGames,
+  GAME_SORT_KEYS,
+} from "./game-filtering";
+export type { GameSortKey, GameViewOptions } from "./game-filtering";
 
 export function computeStats(games: Game[]): Stats {
   const gamesWithAchievements = games.filter((g) => g.achievements.total > 0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Game } from "@/lib/types";
+import { searchSortGames, type GameSortKey } from "@/lib/game-filtering";
+import type { Game, GameFilter } from "@/lib/types";
 
-type SortKey = "playtime" | "completion" | "achievements" | "name";
+const GAME_CHUNK_SIZE = 36;
 
 function CompletionRing({
   value,
@@ -189,42 +190,45 @@ export function GamesView({
   user?: { personaName: string; avatar: string };
 }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<string>("all");
-  const [sort, setSort] = useState<SortKey>("playtime");
+  const [filter, setFilter] = useState<GameFilter>("all");
+  const [sort, setSort] = useState<GameSortKey>("playtime");
+  const [visibleCount, setVisibleCount] = useState(GAME_CHUNK_SIZE);
+  const [prevViewKey, setPrevViewKey] = useState("");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredGames = useMemo(() => {
-    let result = [...games];
+  const filteredGames = useMemo(
+    () => searchSortGames(games, { search, filter, sort }),
+    [games, search, filter, sort],
+  );
 
-    if (filter === "tracked") {
-      result = result.filter((g) => g.tracked);
-    } else if (filter === "owned") {
-      result = result.filter((g) => g.owned);
-    }
+  const viewKey = `${search}\u0000${filter}\u0000${sort}`;
+  if (prevViewKey !== viewKey) {
+    setPrevViewKey(viewKey);
+    setVisibleCount(GAME_CHUNK_SIZE);
+  }
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((g) => g.name.toLowerCase().includes(q));
-    }
+  const visibleGames = useMemo(
+    () => filteredGames.slice(0, visibleCount),
+    [filteredGames, visibleCount],
+  );
 
-    switch (sort) {
-      case "playtime":
-        result.sort((a, b) => b.hours - a.hours);
-        break;
-      case "completion":
-        result.sort((a, b) => b.completion - a.completion);
-        break;
-      case "achievements":
-        result.sort(
-          (a, b) => b.achievements.earned - a.achievements.earned,
-        );
-        break;
-      case "name":
-        result.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
+  const hasMore = visibleCount < filteredGames.length;
 
-    return result;
-  }, [games, search, filter, sort]);
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisibleCount((count) => count + GAME_CHUNK_SIZE);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore]);
+
+  const isNarrowed =
+    search.trim() !== "" || filter !== "all" || sort !== "playtime";
 
   return (
     <div className="flex min-h-screen w-full">
@@ -243,8 +247,9 @@ export function GamesView({
               Your Library
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {games.length} game{games.length !== 1 ? "s" : ""} in your Steam
-              library
+              {isNarrowed
+                ? `${filteredGames.length} of ${games.length} game${games.length !== 1 ? "s" : ""}`
+                : `${games.length} game${games.length !== 1 ? "s" : ""} in your Steam library`}
             </p>
           </div>
 
@@ -273,7 +278,7 @@ export function GamesView({
               </Select>
               <Select
                 value={sort}
-                onValueChange={(v) => setSort(v as SortKey)}
+                onValueChange={(v) => setSort(v as GameSortKey)}
               >
                 <SelectTrigger className="h-9 w-40 border-border/50 bg-card text-xs">
                   <SelectValue placeholder="Sort by" />
@@ -306,11 +311,26 @@ export function GamesView({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredGames.map((game) => (
-                <GameCard key={game.id} game={game} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleGames.map((game) => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
+              {hasMore && (
+                <div className="flex flex-col items-center gap-3 pt-6">
+                  <div ref={sentinelRef} aria-hidden />
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setVisibleCount((count) => count + GAME_CHUNK_SIZE)
+                    }
+                  >
+                    Load more games
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
