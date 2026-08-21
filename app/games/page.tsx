@@ -12,12 +12,11 @@ export default async function GamesPage() {
     redirect("/login");
   }
 
-  const [data, prefs] = await Promise.all([
-    getGamesData({
-      steamId: session.steamId,
-    }),
-    getPreferences(session.steamId),
-  ]);
+  const prefs = await getPreferences(session.steamId);
+  const data = await getGamesData({
+    steamId: session.steamId,
+    preferences: prefs,
+  });
 
   return (
     <GamesView

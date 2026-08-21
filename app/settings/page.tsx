@@ -12,10 +12,11 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const [prefs, gamesData] = await Promise.all([
-    getPreferences(session.steamId),
-    getGamesData({ steamId: session.steamId }),
-  ]);
+  const prefs = await getPreferences(session.steamId);
+  const gamesData = await getGamesData({
+    steamId: session.steamId,
+    preferences: prefs,
+  });
 
   return (
     <SettingsView

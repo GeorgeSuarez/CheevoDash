@@ -57,13 +57,18 @@ function tiersFromBoundaries(boundaries: number[]): RarityTierConfig[] {
     .reverse()
     .slice(0, 4)
     .map((t) => t.color);
-  const [u1, u2, u3, u4] = boundaries;
+  const [ultraRareMax, veryRareMax, rareMax, uncommonMax] = boundaries;
   return [
-    { tier: "Ultra Rare", min: 0, max: u1, color: colors[0] },
-    { tier: "Very Rare", min: u1, max: u2, color: colors[1] },
-    { tier: "Rare", min: u2, max: u3, color: colors[2] },
-    { tier: "Uncommon", min: u3, max: u4, color: colors[3] },
-    { tier: "Common", min: u4, max: 100.1, color: DEFAULT_RARITY_TIERS[0].color },
+    { tier: "Ultra Rare", min: 0, max: ultraRareMax, color: colors[0] },
+    { tier: "Very Rare", min: ultraRareMax, max: veryRareMax, color: colors[1] },
+    { tier: "Rare", min: veryRareMax, max: rareMax, color: colors[2] },
+    { tier: "Uncommon", min: rareMax, max: uncommonMax, color: colors[3] },
+    {
+      tier: "Common",
+      min: uncommonMax,
+      max: 100.1,
+      color: DEFAULT_RARITY_TIERS[0].color,
+    },
   ];
 }
 

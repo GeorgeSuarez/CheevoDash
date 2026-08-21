@@ -45,6 +45,7 @@ Copy `.env.example` to `.env.local` and fill in:
 - `lib/steam.ts` — typed, cached Steam Web API client (`unstable_cache` with tiered revalidation).
 - `lib/dashboard.ts` — async data layer. `getLibrarySnapshot` is the deep module that builds the enriched library once per request (`react cache()`); `getDashboardData`, `getGamesData`, `getAchievementsData`, and `snapshotUser` are thin projections over it.
 - `lib/settings.ts` — user preference read/write (`getPreferences`, `savePreferences`).
+- `lib/game-filtering.ts` — client-safe pure game list transforms (`filterGames`, `searchSortGames`, `hideGames`); re-exported by the data layer for server callers.
 - `lib/types.ts` — shared TypeScript interfaces (UI + Steam raw types).
 - `components/dashboard/` — dashboard feature components (props-driven). `dashboard-view.tsx` is the client wrapper managing filter state. `top-games.tsx` has a track toggle.
 - `components/ui/` — shadcn/ui primitives.

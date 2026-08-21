@@ -30,7 +30,7 @@ import type {
   SteamGlobalAchievement,
 } from "./types";
 import { DEFAULT_RARITY_TIERS } from "./types";
-import { getPreferences } from "./settings";
+import { getPreferences, type UserPreferences } from "./settings";
 import { hideGames } from "./game-filtering";
 
 const CONCURRENCY = 5;
@@ -674,11 +674,15 @@ export interface GamesData {
 
 export async function getGamesData({
   steamId,
+  preferences,
 }: {
   steamId: string;
+  preferences?: UserPreferences;
 }): Promise<GamesData> {
-  const snapshot = await getLibrarySnapshot(steamId);
-  const prefs = await getPreferences(steamId);
+  const [snapshot, prefs] = await Promise.all([
+    getLibrarySnapshot(steamId),
+    preferences ? Promise.resolve(preferences) : getPreferences(steamId),
+  ]);
   return {
     games: hideGames(snapshot.games, prefs.hiddenAppIds),
     user: snapshot.user,

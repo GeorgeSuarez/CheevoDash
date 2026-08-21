@@ -80,6 +80,12 @@ describe("validateRarityTiers", () => {
     expect(validateRarityTiers(inverted)).toBeNull();
   });
 
+  it("rejects gaps between adjacent tiers", () => {
+    const gapped = structuredClone(validTiers);
+    gapped[1].min = 30;
+    expect(validateRarityTiers(gapped)).toBeNull();
+  });
+
   it("rejects out-of-range boundaries", () => {
     const tooHigh = structuredClone(validTiers);
     tooHigh[0].min = 101;

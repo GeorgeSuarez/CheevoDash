@@ -229,8 +229,7 @@ export function GamesView({
     return () => observer.disconnect();
   }, [hasMore]);
 
-  const isNarrowed =
-    search.trim() !== "" || filter !== "all" || sort !== "playtime";
+  const isNarrowed = search.trim() !== "" || filter !== "all";
 
   return (
     <div className="flex min-h-screen w-full">
