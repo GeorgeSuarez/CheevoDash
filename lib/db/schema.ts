@@ -37,6 +37,13 @@ export const snapshots = sqliteTable("snapshots", {
   gamesOwned: integer("games_owned").notNull(),
 });
 
+export const librarySnapshots = sqliteTable("library_snapshots", {
+  steamId: text("steam_id").primaryKey(),
+  version: integer("version").notNull(),
+  payload: text("payload").notNull(),
+  fetchedAt: integer("fetched_at", { mode: "timestamp" }).notNull(),
+});
+
 export const userPreferences = sqliteTable("user_preferences", {
   steamId: text("steam_id").primaryKey().references(() => users.steamId),
   defaultFilter: text("default_filter", { enum: ["all", "owned", "tracked"] })

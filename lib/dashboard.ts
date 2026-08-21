@@ -1,7 +1,12 @@
 import { and, eq, lt, desc } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "./db/client";
-import { snapshots, trackedGames, users } from "./db/schema";
+import {
+  librarySnapshots,
+  snapshots,
+  trackedGames,
+  users,
+} from "./db/schema";
 import {
   getFriendList,
   getGameHeaderImage,
@@ -156,7 +161,6 @@ function buildGame(
   name: string,
   playtimeMinutes: number,
   data: GameData,
-  tracked: boolean,
 ): Game {
   const completion =
     data.achievements.total === 0
@@ -184,7 +188,7 @@ function buildGame(
     },
     image: getGameHeaderImage(appId),
     owned: true,
-    tracked,
+    tracked: false,
     unlocktimes: data.unlocktimes,
   };
 }
@@ -362,6 +366,125 @@ export interface LibrarySnapshot {
   error: DashboardError;
 }
 
+// --- Persisted snapshot cache ---
+
+export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_TTL_MS = 15 * 60 * 1000;
+
+export interface PersistedSnapshot {
+  version: number;
+  fetchedAtMs: number;
+  games: Game[];
+  earnedEntries: EarnedEntry[];
+  user?: { personaName: string; avatar: string };
+}
+
+export function serializeSnapshot(snapshot: PersistedSnapshot): string {
+  return JSON.stringify({
+    version: snapshot.version,
+    fetchedAtMs: snapshot.fetchedAtMs,
+    games: snapshot.games,
+    earnedEntries: snapshot.earnedEntries,
+    user: snapshot.user,
+  });
+}
+
+export function deserializeSnapshot(raw: string): PersistedSnapshot | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  const obj = parsed as Record<string, unknown>;
+  if (obj.version !== SNAPSHOT_VERSION) return null;
+  if (typeof obj.fetchedAtMs !== "number") return null;
+  if (!Array.isArray(obj.games) || !Array.isArray(obj.earnedEntries)) {
+    return null;
+  }
+  return {
+    version: obj.version,
+    fetchedAtMs: obj.fetchedAtMs,
+    games: obj.games as Game[],
+    earnedEntries: obj.earnedEntries as EarnedEntry[],
+    user: obj.user as PersistedSnapshot["user"],
+  };
+}
+
+export function isSnapshotFresh(
+  fetchedAtMs: number,
+  nowMs: number,
+  ttlMs: number = SNAPSHOT_TTL_MS,
+): boolean {
+  return nowMs - fetchedAtMs < ttlMs;
+}
+
+async function readCachedSnapshot(
+  steamId: string,
+): Promise<PersistedSnapshot | null> {
+  try {
+    const rows = await getDb()
+      .select({ payload: librarySnapshots.payload })
+      .from(librarySnapshots)
+      .where(eq(librarySnapshots.steamId, steamId))
+      .limit(1);
+    if (rows.length === 0) return null;
+    return deserializeSnapshot(rows[0].payload);
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedSnapshot(
+  steamId: string,
+  snapshot: Omit<PersistedSnapshot, "version" | "fetchedAtMs">,
+): Promise<void> {
+  const persisted: PersistedSnapshot = {
+    ...snapshot,
+    version: SNAPSHOT_VERSION,
+    fetchedAtMs: Date.now(),
+  };
+  try {
+    await getDb()
+      .insert(librarySnapshots)
+      .values({
+        steamId,
+        version: persisted.version,
+        payload: serializeSnapshot(persisted),
+        fetchedAt: new Date(persisted.fetchedAtMs),
+      })
+      .onConflictDoUpdate({
+        target: librarySnapshots.steamId,
+        set: {
+          version: persisted.version,
+          payload: serializeSnapshot(persisted),
+          fetchedAt: new Date(persisted.fetchedAtMs),
+        },
+      });
+  } catch {
+    // ignore write errors — cache is best-effort
+  }
+}
+
+async function applyTrackedState(
+  steamId: string,
+  persisted: Omit<PersistedSnapshot, "version" | "fetchedAtMs">,
+): Promise<LibrarySnapshot> {
+  const trackedSet = await getTrackedAppIds(steamId);
+  return {
+    games: persisted.games.map((g) => ({
+      ...g,
+      tracked: trackedSet.has(g.appId),
+    })),
+    earnedEntries: persisted.earnedEntries,
+    user: persisted.user,
+    error: null,
+  };
+}
+
 function emptyStats(): Stats {
   return {
     achievementsEarned: 0,
@@ -375,89 +498,108 @@ function emptyStats(): Stats {
   };
 }
 
+async function fetchLibraryFromSteam(
+  steamId: string,
+): Promise<{
+  persisted: Omit<PersistedSnapshot, "version" | "fetchedAtMs"> | null;
+  error: DashboardError;
+}> {
+  const result = await getOwnedGames(steamId);
+
+  if (!result.ok) {
+    return {
+      persisted: null,
+      error: {
+        type: result.reason,
+        status: result.status ?? undefined,
+      },
+    };
+  }
+
+  if (result.games.length === 0) {
+    return { persisted: { games: [], earnedEntries: [] }, error: null };
+  }
+
+  const sorted = [...result.games].sort(
+    (a, b) => b.playtime_forever - a.playtime_forever,
+  );
+  const detailedSlice = sorted.filter(
+    (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
+  );
+  const detailedIds = new Set(detailedSlice.map((g) => g.appid));
+  const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
+
+  const [detailedResults, user] = await Promise.all([
+    mapWithConcurrency(
+      detailedSlice,
+      CONCURRENCY,
+      async (owned) => {
+        const data = await fetchGameData(steamId, owned.appid);
+        const game = buildGame(
+          owned.appid,
+          owned.name,
+          owned.playtime_forever,
+          data,
+        );
+        return { game, earnedEntries: data.earnedEntries };
+      },
+    ),
+    getUserInfo(steamId),
+  ]);
+
+  const detailedGames = detailedResults.map((r) => r.game);
+
+  const basicGames: Game[] = basicSlice.map((owned) => ({
+    id: String(owned.appid),
+    appId: owned.appid,
+    name: owned.name,
+    hours: Math.round(owned.playtime_forever / 60),
+    completion: 0,
+    achievements: { earned: 0, total: 0 },
+    comparison: { text: "No data", percent: 0, isPositive: false },
+    image: getGameHeaderImage(owned.appid),
+    owned: true,
+    tracked: false,
+    unlocktimes: [],
+  }));
+
+  const games = [...detailedGames, ...basicGames].sort(
+    (a, b) => b.hours - a.hours,
+  );
+
+  const earnedEntries: EarnedEntry[] = detailedResults.flatMap((r) =>
+    r.earnedEntries.map((e) => ({
+      appId: r.game.appId,
+      gameName: r.game.name,
+      apiname: e.apiname,
+      unlocktime: e.unlocktime,
+      globalPercent: e.globalPercent,
+    })),
+  );
+
+  return {
+    persisted: { games, earnedEntries, user },
+    error: null,
+  };
+}
+
 export const getLibrarySnapshot = cache(
   async (steamId: string): Promise<LibrarySnapshot> => {
-    const result = await getOwnedGames(steamId);
-
-    if (!result.ok) {
-      return {
-        games: [],
-        earnedEntries: [],
-        error: {
-          type: result.reason,
-          status: result.status ?? undefined,
-        },
-      };
+    const cached = await readCachedSnapshot(steamId);
+    if (cached && isSnapshotFresh(cached.fetchedAtMs, Date.now())) {
+      return applyTrackedState(steamId, cached);
     }
 
-    if (result.games.length === 0) {
-      return { games: [], earnedEntries: [], error: null };
+    const outcome = await fetchLibraryFromSteam(steamId);
+
+    if (outcome.error !== null) {
+      // Serve the stale cache rather than failing when we have one.
+      if (cached) return applyTrackedState(steamId, cached);
+      return { games: [], earnedEntries: [], error: outcome.error };
     }
 
-    const sorted = [...result.games].sort(
-      (a, b) => b.playtime_forever - a.playtime_forever,
-    );
-    const detailedSlice = sorted.filter(
-      (g) => g.playtime_forever > 0 && g.has_community_visible_stats,
-    );
-    const detailedIds = new Set(detailedSlice.map((g) => g.appid));
-    const basicSlice = sorted.filter((g) => !detailedIds.has(g.appid));
-
-    const [trackedSet, detailedResults, user] = await Promise.all([
-      getTrackedAppIds(steamId),
-      mapWithConcurrency(
-        detailedSlice,
-        CONCURRENCY,
-        async (owned) => {
-          const data = await fetchGameData(steamId, owned.appid);
-          const game = buildGame(
-            owned.appid,
-            owned.name,
-            owned.playtime_forever,
-            data,
-            false, // placeholder, replaced below
-          );
-          return { game, earnedEntries: data.earnedEntries };
-        },
-      ),
-      getUserInfo(steamId),
-    ]);
-
-    const detailedGames = detailedResults.map((r) => r.game);
-
-    for (const game of detailedGames) {
-      game.tracked = trackedSet.has(game.appId);
-    }
-
-    const basicGames: Game[] = basicSlice.map((owned) => ({
-      id: String(owned.appid),
-      appId: owned.appid,
-      name: owned.name,
-      hours: Math.round(owned.playtime_forever / 60),
-      completion: 0,
-      achievements: { earned: 0, total: 0 },
-      comparison: { text: "No data", percent: 0, isPositive: false },
-      image: getGameHeaderImage(owned.appid),
-      owned: true,
-      tracked: trackedSet.has(owned.appid),
-      unlocktimes: [],
-    }));
-
-    const games = [...detailedGames, ...basicGames].sort(
-      (a, b) => b.hours - a.hours,
-    );
-
-    const earnedEntries: EarnedEntry[] = detailedResults.flatMap((r) =>
-      r.earnedEntries.map((e) => ({
-        appId: r.game.appId,
-        gameName: r.game.name,
-        apiname: e.apiname,
-        unlocktime: e.unlocktime,
-        globalPercent: e.globalPercent,
-      })),
-    );
-
-    return { games, earnedEntries, user, error: null };
+    await writeCachedSnapshot(steamId, outcome.persisted!);
+    return applyTrackedState(steamId, outcome.persisted!);
   },
 );
 

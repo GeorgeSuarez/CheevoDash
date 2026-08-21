@@ -5,12 +5,15 @@ import type {
   SteamPlayerAchievement,
 } from "@/lib/types";
 
-const { mockWhere, mockLimit, mockFrom, mockSelect } = vi.hoisted(() => {
-  const mockWhere = vi.fn();
-  const mockLimit = vi.fn();
-  const mockFrom = vi.fn();
+const { mockSelect, dbState } = vi.hoisted(() => {
   const mockSelect = vi.fn();
-  return { mockWhere, mockLimit, mockFrom, mockSelect };
+  const dbState = {
+    trackedRows: [] as unknown[],
+    userRows: [] as unknown[],
+    snapshotRows: [] as unknown[],
+    currentRows: [] as unknown[],
+  };
+  return { mockSelect, dbState };
 });
 
 vi.mock("@/lib/db/client", () => ({
@@ -29,7 +32,7 @@ vi.mock("@/lib/steam", () => ({
   getPlayerSummaries: vi.fn(),
 }));
 
-import { getAchievementsData, getLibrarySnapshot } from "@/lib/dashboard";
+import { getAchievementsData, getLibrarySnapshot, serializeSnapshot, SNAPSHOT_VERSION } from "@/lib/dashboard";
 import {
   getGlobalAchievementPercentages,
   getOwnedGames,
@@ -110,18 +113,24 @@ const detailedLibrary: SteamOwnedGame[] = [
 function queryResult(rows: unknown) {
   return {
     then: (resolve: (v: unknown) => void) => resolve(rows),
-    limit: mockLimit,
+    limit: async () => rows,
   };
 }
 
 beforeEach(() => {
-  mockWhere.mockReset().mockImplementation(() => queryResult([]));
-  mockLimit.mockReset().mockResolvedValue([]);
-  mockFrom.mockReset().mockImplementation(() => ({
-    where: mockWhere,
-    limit: mockLimit,
-  }));
-  mockSelect.mockReset().mockImplementation(() => ({ from: mockFrom }));
+  dbState.trackedRows = [];
+  dbState.userRows = [];
+  dbState.snapshotRows = [];
+  dbState.currentRows = [];
+  // Route by selected columns, not call order; rows resolve whether the query
+  // chain terminates at .where() or .limit().
+  mockSelect.mockReset().mockImplementation((cols: Record<string, unknown>) => {
+    if (cols && "payload" in cols) dbState.currentRows = dbState.snapshotRows;
+    else if (cols && "appId" in cols)
+      dbState.currentRows = dbState.trackedRows;
+    else dbState.currentRows = dbState.userRows;
+    return { from: () => ({ where: () => queryResult(dbState.currentRows) }) };
+  });
 
   vi.mocked(getOwnedGames).mockReset();
   vi.mocked(getPlayerAchievements)
@@ -139,13 +148,13 @@ beforeEach(() => {
 
 describe("getLibrarySnapshot", () => {
   it("builds the enriched library with earned entries, tracked flags, and user", async () => {
-    mockWhere.mockImplementationOnce(() => queryResult([{ appId: 1245620 }]));
-    mockLimit.mockResolvedValueOnce([
+    dbState.trackedRows = [{ appId: 1245620 }];
+    dbState.userRows = [
       {
         personaName: "Dreadnought",
         avatar: "https://avatars.steamstatic.com/a1.jpg",
       },
-    ]);
+    ];
     vi.mocked(getOwnedGames).mockResolvedValue(ownedGames(...detailedLibrary));
 
     const snapshot = await getLibrarySnapshot("76561198000000001");
@@ -214,8 +223,111 @@ describe("getLibrarySnapshot", () => {
     expect(snapshot.earnedEntries).toEqual([]);
   });
 
+  it("serves a fresh cached snapshot without hitting Steam", async () => {
+    dbState.snapshotRows = [
+      {
+        payload: serializeSnapshot({
+          version: SNAPSHOT_VERSION,
+          fetchedAtMs: Date.now(),
+          games: [
+            {
+              id: "100",
+              appId: 100,
+              name: "Cached Game",
+              hours: 10,
+              completion: 50,
+              achievements: { earned: 5, total: 10 },
+              comparison: { text: "You're ahead of", percent: 40, isPositive: true },
+              image: "https://cdn.example/100/header.jpg",
+              owned: true,
+              tracked: false,
+              unlocktimes: [],
+            },
+          ],
+          earnedEntries: [],
+          user: { personaName: "Cached User", avatar: "https://cdn.example/a.jpg" },
+        }),
+      },
+    ];
+    dbState.trackedRows = [{ appId: 100 }];
+    vi.mocked(getOwnedGames).mockResolvedValue(ownedGames(...detailedLibrary));
+
+    const snapshot = await getLibrarySnapshot("76561198000000006");
+
+    expect(snapshot.error).toBeNull();
+    expect(vi.mocked(getOwnedGames)).not.toHaveBeenCalled();
+    expect(vi.mocked(getPlayerAchievements)).not.toHaveBeenCalled();
+    expect(snapshot.games).toHaveLength(1);
+    expect(snapshot.games[0]).toMatchObject({ appId: 100, tracked: true });
+    expect(snapshot.user).toEqual({
+      personaName: "Cached User",
+      avatar: "https://cdn.example/a.jpg",
+    });
+  });
+
+  it("falls back to a stale cached snapshot when Steam errors", async () => {
+    dbState.snapshotRows = [
+      {
+        payload: serializeSnapshot({
+          version: SNAPSHOT_VERSION,
+          fetchedAtMs: Date.now() - 24 * 60 * 60 * 1000,
+          games: [
+            {
+              id: "200",
+              appId: 200,
+              name: "Stale Game",
+              hours: 2,
+              completion: 20,
+              achievements: { earned: 2, total: 10 },
+              comparison: { text: "You're behind", percent: 40, isPositive: false },
+              image: "https://cdn.example/200/header.jpg",
+              owned: true,
+              tracked: false,
+              unlocktimes: [],
+            },
+          ],
+          earnedEntries: [],
+        }),
+      },
+    ];
+    vi.mocked(getOwnedGames).mockResolvedValue({
+      ok: false,
+      reason: "private_profile",
+      status: 403,
+    });
+
+    const snapshot = await getLibrarySnapshot("76561198000000007");
+
+    expect(snapshot.error).toBeNull();
+    expect(snapshot.games.map((g) => g.appId)).toEqual([200]);
+  });
+
+  it("refetches from Steam when the cache is stale", async () => {
+    dbState.snapshotRows = [
+      {
+        payload: serializeSnapshot({
+          version: SNAPSHOT_VERSION,
+          fetchedAtMs: Date.now() - 24 * 60 * 60 * 1000,
+          games: [],
+          earnedEntries: [],
+        }),
+      },
+    ];
+    vi.mocked(getOwnedGames).mockResolvedValue(ownedGames(...detailedLibrary));
+
+    const snapshot = await getLibrarySnapshot("76561198000000008");
+
+    expect(snapshot.error).toBeNull();
+    expect(snapshot.games.map((g) => g.appId)).toEqual([
+      1245620,
+      292030,
+      367520,
+    ]);
+    expect(vi.mocked(getPlayerAchievements)).toHaveBeenCalledTimes(3);
+  });
+
   it("skips enrichment for basic games but still includes them with zeroed data", async () => {
-    mockWhere.mockImplementationOnce(() => queryResult([{ appId: 1245620 }]));
+    dbState.trackedRows = [{ appId: 1245620 }];
     vi.mocked(getOwnedGames).mockResolvedValue(
       ownedGames(detailedLibrary[0], {
         appid: 1234,
@@ -244,7 +356,7 @@ describe("getLibrarySnapshot", () => {
 
 describe("getAchievementsData", () => {
   it("reuses the snapshot and does not re-fetch game data for earned entries", async () => {
-    mockWhere.mockImplementationOnce(() => queryResult([{ appId: 1245620 }]));
+    dbState.trackedRows = [{ appId: 1245620 }];
     vi.mocked(getOwnedGames).mockResolvedValue(ownedGames(...detailedLibrary));
 
     const data = await getAchievementsData("76561198000000005");
