@@ -1,85 +1,65 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { Gamepad2 } from "lucide-react";
-import { SignInButton } from "@/components/dashboard/sign-in-button";
+import {
+  LoginVariantA,
+  LoginVariantB,
+  LoginVariantC,
+} from "./login-prototype";
+import { PrototypeSwitcher } from "@/components/ui/prototype-switcher";
 
 export const metadata: Metadata = {
   title: "Sign in",
 };
 
+// PROTOTYPE (throwaway): three login designs behind ?variant= — see
+// ./login-prototype.tsx. Fold the winner into this page, then delete the
+// variants and the switcher.
+
+const VARIANTS = [
+  { key: "A", name: "Split showcase" },
+  { key: "B", name: "Poster" },
+  { key: "C", name: "Glass over app" },
+] as const;
+
+function errorMessageFor(code: string): string {
+  switch (code) {
+    case "auth_failed":
+      return "Steam could not verify your sign-in. Please try again.";
+    case "no_steamid":
+      return "We couldn't read your Steam ID. Please try again.";
+    case "db_error":
+      return "We couldn't save your profile. Your session still works.";
+    default:
+      return "Something went wrong.";
+  }
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; variant?: string }>;
 }) {
   const session = await getSession();
   if (session) {
     redirect("/");
   }
 
-  const { error } = await searchParams;
-
-  function errorMessageFor(code: string): string {
-    switch (code) {
-      case "auth_failed":
-        return "Steam could not verify your sign-in. Please try again.";
-      case "no_steamid":
-        return "We couldn't read your Steam ID. Please try again.";
-      case "db_error":
-        return "We couldn't save your profile. Your session still works.";
-      default:
-        return "Something went wrong.";
-    }
-  }
+  const { error, variant } = await searchParams;
+  const current = VARIANTS.find((v) => v.key === variant)?.key ?? "A";
   const errorMessage = error ? errorMessageFor(error) : null;
 
+  const props = { errorMessage };
+
   return (
-    <main className="relative flex min-h-screen w-full flex-col items-center justify-center gap-8 overflow-hidden bg-background">
-      {/* Subtle background pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-        aria-hidden
+    <>
+      {current === "A" && <LoginVariantA {...props} />}
+      {current === "B" && <LoginVariantB {...props} />}
+      {current === "C" && <LoginVariantC {...props} />}
+      <PrototypeSwitcher
+        variants={[...VARIANTS]}
+        current={current}
       />
-
-      {/* Content */}
-      <div
-        className="flex animate-fade-in flex-col items-center gap-4 text-center"
-      >
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-          <Gamepad2 className="h-8 w-8 text-primary-foreground" aria-hidden />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">CheevoDash</h1>
-          <p className="mt-2 max-w-sm text-base text-muted-foreground">
-            Sign in with Steam to track your achievements and compare your
-            progress with friends.
-          </p>
-        </div>
-      </div>
-
-      {errorMessage && (
-        <div
-          role="alert"
-          className="animate-fade-in rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          {errorMessage}
-        </div>
-      )}
-
-      <div className="animate-fade-in">
-        <SignInButton />
-      </div>
-
-      <p className="max-w-sm animate-fade-in text-center text-xs text-muted-foreground">
-        Your Steam profile and game details must be public for achievement
-        tracking to work.
-      </p>
-    </main>
+    </>
   );
 }
