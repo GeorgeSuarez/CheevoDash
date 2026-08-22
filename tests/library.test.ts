@@ -281,7 +281,6 @@ describe("getLibrarySnapshot", () => {
       fetchedAtMs: Date.now(),
       games: [
         {
-          id: "100",
           appId: 100,
           name: "Cached Game",
           hours: 10,

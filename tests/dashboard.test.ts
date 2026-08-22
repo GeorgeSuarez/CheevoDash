@@ -3,8 +3,8 @@ import {
   computeStats,
   filterGames,
   meanGlobalPercent,
-  DASHBOARD_FILTERS,
 } from "@/lib/dashboard";
+import { DASHBOARD_FILTERS } from "@/lib/types";
 import type { Game, SteamGlobalAchievement } from "@/lib/types";
 import {
   globalAchievementsFixture,
@@ -16,7 +16,6 @@ import {
 
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
-    id: "g-1",
     appId: 100,
     name: "Test Game",
     hours: 50,
@@ -79,7 +78,7 @@ describe("computeStats", () => {
     const games = [
       makeGame({ owned: true, tracked: true }),
       makeGame({ owned: true, tracked: false }),
-      makeGame({ id: "g-3", owned: true, tracked: true }),
+      makeGame({ owned: true, tracked: true }),
     ];
     const stats = computeStats(games);
     expect(stats.gamesOwned).toBe(3);
@@ -107,9 +106,9 @@ describe("computeStats", () => {
 
 describe("filterGames", () => {
   const games = [
-    makeGame({ id: "1", owned: true, tracked: true }),
-    makeGame({ id: "2", owned: true, tracked: false }),
-    makeGame({ id: "3", owned: true, tracked: true }),
+    makeGame({ owned: true, tracked: true }),
+    makeGame({ owned: true, tracked: false }),
+    makeGame({ owned: true, tracked: true }),
   ];
 
   it("'all' returns all games", () => {
@@ -217,7 +216,6 @@ describe("computeStats with fixture-derived games", () => {
       .map((a) => a.unlocktime);
 
     const games: Game[] = ownedGamesFixture.response.games.map((owned, i) => ({
-      id: String(owned.appid),
       appId: owned.appid,
       name: owned.name,
       hours: Math.round(owned.playtime_forever / 60),

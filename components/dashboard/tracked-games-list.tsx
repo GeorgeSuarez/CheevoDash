@@ -43,7 +43,7 @@ export function TrackedGamesList({ games }: { games: Game[] }) {
           <div className="divide-y divide-border/30">
             {tracked.map((game) => (
               <Link
-                key={game.id}
+                key={game.appId}
                 href={`/games/${game.appId}`}
                 className="block py-3 transition-colors hover:bg-white/[0.02]"
               >
