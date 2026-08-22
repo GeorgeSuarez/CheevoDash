@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { DASHBOARD_FILTERS, getDashboardData } from "@/lib/dashboard";
+import { getDashboardData } from "@/lib/dashboard";
+import { DASHBOARD_FILTERS } from "@/lib/types";
 import { getSession } from "@/lib/auth";
 
 export async function GET(request: Request) {

@@ -14,7 +14,6 @@ export interface GameComparison {
 }
 
 export interface Game {
-  id: string;
   appId: number;
   name: string;
   hours: number;
@@ -63,7 +62,6 @@ export interface GameAchievement {
   achieved: boolean;
   unlocktime: number;
   globalPercent: number;
-  hidden: boolean;
 }
 
 export interface RarityTier {

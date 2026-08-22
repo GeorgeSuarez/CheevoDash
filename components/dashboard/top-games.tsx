@@ -167,7 +167,7 @@ function TopGameTableRow({
 }) {
   return (
     <tr
-      key={game.id}
+      key={game.appId}
       className="border-t border-border/30 transition-colors hover:bg-white/[0.02]"
     >
       <td className="py-4">
@@ -260,7 +260,7 @@ export function TopGames({
                 <tbody className="text-sm">
                   {topGames.map((game) => (
                     <TopGameTableRow
-                      key={game.id}
+                      key={game.appId}
                       game={game}
                       onTrackToggle={onTrackToggle}
                     />
@@ -271,7 +271,7 @@ export function TopGames({
             <div className="lg:hidden">
               {topGames.map((game) => (
                 <TopGameCard
-                  key={game.id}
+                  key={game.appId}
                   game={game}
                   onTrackToggle={onTrackToggle}
                 />

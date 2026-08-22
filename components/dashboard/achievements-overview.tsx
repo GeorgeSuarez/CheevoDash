@@ -199,7 +199,7 @@ export function AchievementsOverview({ data }: { data: AchievementsOverviewData 
                           {gamesWithAch.sort((a, b) => b.hours - a.hours).map((game) => {
                             const rarest = rarestPerGame.find((r) => r.appId === game.appId);
                             return (
-                              <tr key={game.id} className="border-b border-border/20 transition-colors hover:bg-white/[0.02] last:border-b-0">
+                              <tr key={game.appId} className="border-b border-border/20 transition-colors hover:bg-white/[0.02] last:border-b-0">
                                 <td className="py-3 pr-4">
                                   <Link href={`/games/${game.appId}`} className="flex items-center gap-3">
                                     <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg">

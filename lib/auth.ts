@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { isString } from "./decode";
+import { env } from "./env";
 
 const SESSION_COOKIE = "cheevodash_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -10,11 +11,7 @@ export interface SessionPayload {
 }
 
 function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not set. Add it to .env.local");
-  }
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(env.authSecret);
 }
 
 export async function createSession(steamId: string): Promise<void> {

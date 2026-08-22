@@ -35,25 +35,20 @@ export async function savePreferences(
   const filter =
     prefs.defaultFilter && DASHBOARD_FILTERS.includes(prefs.defaultFilter)
       ? prefs.defaultFilter
-      : undefined;
+      : null;
 
-  const values: Partial<typeof userPreferences.$inferInsert> = {};
-  if (filter) values.defaultFilter = filter;
-
-  if (Object.keys(values).length === 0) {
-    return getPreferences(steamId);
-  }
-
-  try {
-    await getDb()
-      .insert(userPreferences)
-      .values({ steamId, ...values })
-      .onConflictDoUpdate({
-        target: userPreferences.steamId,
-        set: values,
-      });
-  } catch {
-    // fall through
+  if (filter) {
+    try {
+      await getDb()
+        .insert(userPreferences)
+        .values({ steamId, defaultFilter: filter })
+        .onConflictDoUpdate({
+          target: userPreferences.steamId,
+          set: { defaultFilter: filter },
+        });
+    } catch {
+      // fall through
+    }
   }
 
   return getPreferences(steamId);

@@ -176,7 +176,6 @@ function buildGame(
   const communityPct = Math.round(safeCommunityAvg * 10) / 10;
 
   return {
-    id: String(appId),
     appId,
     name,
     hours: Math.round(playtimeMinutes / 60),
@@ -383,13 +382,7 @@ export interface PersistedSnapshot {
 }
 
 export function serializeSnapshot(snapshot: PersistedSnapshot): string {
-  return JSON.stringify({
-    version: snapshot.version,
-    fetchedAtMs: snapshot.fetchedAtMs,
-    games: snapshot.games,
-    earnedEntries: snapshot.earnedEntries,
-    user: snapshot.user,
-  });
+  return JSON.stringify(snapshot);
 }
 
 interface SnapshotWire {
@@ -564,7 +557,6 @@ async function fetchLibraryFromSteam(
   const detailedGames = detailedResults.map((r) => r.game);
 
   const basicGames: Game[] = basicSlice.map((owned) => ({
-    id: String(owned.appid),
     appId: owned.appid,
     name: owned.name,
     hours: Math.round(owned.playtime_forever / 60),
@@ -669,29 +661,6 @@ export async function getDashboardData({
     user: snapshot.user,
   };
 }
-
-// --- Lightweight games-only entry point ---
-
-export interface GamesData {
-  games: Game[];
-  user?: { personaName: string; avatar: string };
-  error: DashboardError;
-}
-
-export async function getGamesData({
-  steamId,
-}: {
-  steamId: string;
-}): Promise<GamesData> {
-  const snapshot = await getLibrarySnapshot(steamId);
-  return {
-    games: snapshot.games,
-    user: snapshot.user,
-    error: snapshot.error,
-  };
-}
-
-export { DASHBOARD_FILTERS } from "./types";
 
 // --- Friends list ---
 
@@ -876,7 +845,6 @@ export async function getGameAchievements(
       achieved: a.achieved === 1,
       unlocktime: a.unlocktime,
       globalPercent: globalPctMap.get(a.apiname) ?? 0,
-      hidden: false,
     };
   });
 
