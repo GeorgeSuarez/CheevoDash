@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPreferences, savePreferences } from "@/lib/settings";
 import { getSession } from "@/lib/auth";
+import { DASHBOARD_FILTERS } from "@/lib/types";
 
 export async function GET() {
   const session = await getSession();
@@ -11,8 +12,6 @@ export async function GET() {
   return NextResponse.json(prefs);
 }
 
-const FILTER_KEYS = ["all", "owned", "tracked"] as const;
-
 export async function PUT(request: Request) {
   const session = await getSession();
   if (!session) {
@@ -20,7 +19,7 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const requested = FILTER_KEYS.find((key) => key === body?.defaultFilter);
+  const requested = DASHBOARD_FILTERS.find((key) => key === body?.defaultFilter);
   if (!requested && body?.defaultFilter != null) {
     return NextResponse.json(
       { error: `Invalid defaultFilter: ${String(body.defaultFilter)}` },

@@ -309,20 +309,22 @@ async function enrichWithSchemas(entries: EarnedEntry[]): Promise<RecentAchievem
 
 async function computeRecentAchievements(
   entries: EarnedEntry[],
+  limit: number = ACHIEVEMENTS_LIMIT,
 ): Promise<RecentAchievement[]> {
   const top = [...entries]
     .sort((a, b) => b.unlocktime - a.unlocktime)
-    .slice(0, ACHIEVEMENTS_LIMIT);
+    .slice(0, limit);
   return enrichWithSchemas(top);
 }
 
 async function computeRarestAchievements(
   entries: EarnedEntry[],
+  limit: number = ACHIEVEMENTS_LIMIT,
 ): Promise<RecentAchievement[]> {
   const top = [...entries]
     .filter((e) => e.globalPercent != null && e.globalPercent > 0)
     .sort((a, b) => (a.globalPercent ?? 100) - (b.globalPercent ?? 100))
-    .slice(0, ACHIEVEMENTS_LIMIT);
+    .slice(0, limit);
   return enrichWithSchemas(top);
 }
 
@@ -689,7 +691,7 @@ export async function getGamesData({
   };
 }
 
-export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
+export { DASHBOARD_FILTERS } from "./types";
 
 // --- Friends list ---
 
@@ -771,19 +773,8 @@ export async function getAchievementsData(
   const stats = computeStats(games);
 
   const [recentAchievements, rarestAchievements] = await Promise.all([
-    (async () => {
-      const top = [...snapshot.earnedEntries]
-        .sort((a, b) => b.unlocktime - a.unlocktime)
-        .slice(0, 20);
-      return enrichWithSchemas(top);
-    })(),
-    (async () => {
-      const top = [...snapshot.earnedEntries]
-        .filter((e) => e.globalPercent > 0)
-        .sort((a, b) => a.globalPercent - b.globalPercent)
-        .slice(0, 10);
-      return enrichWithSchemas(top);
-    })(),
+    computeRecentAchievements(snapshot.earnedEntries, 20),
+    computeRarestAchievements(snapshot.earnedEntries, 10),
   ]);
 
   const rarestPerGame: AchievementsOverviewData["rarestPerGame"] = (

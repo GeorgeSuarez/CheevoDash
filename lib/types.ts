@@ -1,5 +1,7 @@
 export type GameFilter = "all" | "owned" | "tracked";
 
+export const DASHBOARD_FILTERS: GameFilter[] = ["all", "owned", "tracked"];
+
 export interface AchievementPair {
   earned: number;
   total: number;

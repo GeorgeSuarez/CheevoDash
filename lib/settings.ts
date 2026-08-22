@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "./db/client";
 import { userPreferences } from "./db/schema";
-import type { GameFilter } from "./types";
+import { DASHBOARD_FILTERS, type GameFilter } from "./types";
 
 export interface UserPreferences {
   defaultFilter: GameFilter;
@@ -32,10 +32,8 @@ export async function savePreferences(
   steamId: string,
   prefs: Partial<UserPreferences>,
 ): Promise<UserPreferences> {
-  const validFilters: GameFilter[] = ["all", "owned", "tracked"];
-
   const filter =
-    prefs.defaultFilter && validFilters.includes(prefs.defaultFilter)
+    prefs.defaultFilter && DASHBOARD_FILTERS.includes(prefs.defaultFilter)
       ? prefs.defaultFilter
       : undefined;
 
