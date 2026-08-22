@@ -330,7 +330,6 @@
         <path class="wire" d="M 200 104 H 1032"/>
         <path class="wire" d="M 1110 150 V 214 Q 1110 226 1098 226 H 762 Q 750 226 750 232"/>
         <path class="wire" d="M 1188 104 H 1212 Q 1224 104 1224 116 V 492 Q 1224 504 1212 504 H 1204"/>
-        <path class="wire" d="M 820 238 V 442"/>
         <path class="wire" d="M 820 442 V 474"/>
         <path class="wire" d="M 700 514 H 648"/>
         <path class="wire" d="M 940 514 H 946"/>
@@ -341,7 +340,6 @@
         <path class="ovl c-server" d="M 200 104 H 1032"/>
         <path class="ovl c-steam"  d="M 1110 150 V 214 Q 1110 226 1098 226 H 762 Q 750 226 750 232"/>
         <path class="ovl c-server" d="M 1188 104 H 1212 Q 1224 104 1224 116 V 492 Q 1224 504 1212 504 H 1204"/>
-        <path class="ovl c-steam"  d="M 820 238 V 442"/>
         <path class="ovl c-db"     d="M 820 442 V 474"/>
         <path class="ovl c-db"     d="M 700 514 H 648"/>
         <path class="ovl c-server" d="M 940 514 H 946"/>
@@ -377,6 +375,11 @@
           <animateMotion dur="8s" begin="-2s" repeatCount="indefinite"
             path="M 1110 150 V 214 Q 1110 226 1098 226 L 762 226 Q 750 226 750 238 L 750 442 L 820 442 L 820 470"/>
         </g>
+        <g class="pkt p-steam">
+          <circle class="halo" r="7"/><circle class="core" r="3"/>
+          <animateMotion dur="8s" begin="-6s" repeatCount="indefinite"
+            path="M 1110 150 V 214 Q 1110 226 1098 226 L 762 226 Q 750 226 750 238 L 750 442 L 820 442 L 820 470"/>
+        </g>
         <g class="pkt p-server">
           <circle class="halo" r="7"/><circle class="core" r="3"/>
           <animateMotion dur="9s" begin="-4s" repeatCount="indefinite"
@@ -387,15 +390,6 @@
           <animateMotion dur="6s" begin="-1s" repeatCount="indefinite"
             path="M 920 684 L 742 684 L 115 684 Q 103 684 103 672 L 103 156"/>
         </g>
-        <g class="pkt p-steam"><circle class="halo" r="5"/><circle class="core" r="2.2"/>
-          <animateMotion dur="2.2s" begin="0s" repeatCount="indefinite" path="M 820 238 V 442"/></g>
-        <g class="pkt p-steam"><circle class="halo" r="5"/><circle class="core" r="2.2"/>
-          <animateMotion dur="2.2s" begin="-0.55s" repeatCount="indefinite" path="M 820 238 V 442"/></g>
-        <g class="pkt p-steam"><circle class="halo" r="5"/><circle class="core" r="2.2"/>
-          <animateMotion dur="2.2s" begin="-1.1s" repeatCount="indefinite" path="M 820 238 V 442"/></g>
-        <g class="pkt p-steam"><circle class="halo" r="5"/><circle class="core" r="2.2"/>
-          <animateMotion dur="2.2s" begin="-1.65s" repeatCount="indefinite" path="M 820 238 V 442"/></g>
-
         <!-- Steam cluster -->
         <g class="zone">
           <rect x="470" y="238" width="560" height="204" rx="12"/>
